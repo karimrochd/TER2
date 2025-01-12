@@ -1,0 +1,14 @@
+__pycache__/
+results/
+venv/
+images/
+myscript.cprof
+*.png
+*.tif
+*.tiff
+*.TIF
+*.npz
+*.pdf
+*.log
+*.jpg
+*.jpeg
