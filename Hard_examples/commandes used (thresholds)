@@ -1,0 +1,18 @@
+python draft_v5.1.py test1.png --spacing_factor 1.2 --corner_threshold 15
+python draft_v5.1.py input_data --spacing_factor 3.0 --corner_threshold 40
+
+python draft_v5.1.py Hard_examples/test1 --output_dir output/Hard_examples/test1 --spacing_factor 1.2 --corner_threshold 150
+python draft_v5.1.py Hard_examples/test2 --output_dir output/Hard_examples/test2 --spacing_factor 1.2 --corner_threshold 100
+python draft_v5.1.py Hard_examples/test3 --output_dir output/Hard_examples/test3 --spacing_factor 1.2 --corner_threshold 100
+
+
+ python draft_v5.1.py Hard_examples/scripts/input_1.png --output_dir output/Hard_examples/scripts --spacing_factor 3.0 --corner_threshold 40
+python draft_v5.1.py Hard_examples/scripts/input_3.png --output_dir output/Hard_examples/scripts --spacing_factor 3.0 --corner_threshold 20
+python draft_v5.1.py Hard_examples/scripts/input_0.png --output_dir output/Hard_examples/scripts --spacing_factor 1.2 --corner_threshold 18
+
+
+
+
+
+# todo only lines
+
