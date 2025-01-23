@@ -68,11 +68,7 @@ class Docstrum:
         """
         # Apply Otsu's thresholding
         _, binary = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        # Apply morphological operations to remove noise
-        # kernel = np.ones((3,3), np.uint8)
-        # binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
-        # binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+
         binary = (binary == 0).astype(np.uint8)
 
         binary = remove_small_components(binary, k=7)
@@ -109,7 +105,7 @@ class Docstrum:
             area = stats[i, cv2.CC_STAT_AREA]
             
             # Filter out components that are too small or too large
-            if area < median_area * 0.05 or area > median_area * 20:
+            if area < median_area * 0.05:
                 continue
                 
             x = stats[i, cv2.CC_STAT_LEFT]
@@ -599,7 +595,7 @@ class Docstrum:
         return blocks
 
     def find_blocks(self, components: List[Component], text_lines: List[List[int]], 
-                max_vertical_gap: float = 1.5, horizontal_overlap_threshold: float = 0.5) -> List[List[List[int]]]:
+                max_vertical_gap: float = 1.5, horizontal_overlap_threshold: float = 0.2) -> List[List[List[int]]]:
         """
         Improved block detection with stricter merging criteria
         
