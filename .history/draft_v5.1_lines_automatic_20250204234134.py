@@ -11,6 +11,68 @@ import matplotlib
 matplotlib.use('Agg')
 
 
+
+
+@dataclass
+class Component:
+    """Class to store connected component information"""
+    bbox: Tuple[int, int, int, int]  # x, y, w, h
+    centroid: Tuple[float, float]
+    area: int
+
+
+
+def calculate_horizontal_threshold(text_lines: List[List[int]], components: List[Component]) -> float:
+    """
+    Calculate optimal horizontal threshold based on within-line spacing histogram
+    
+    Args:
+        text_lines: List of text lines (each line is a list of component indices)
+        components: List of components
+        
+    Returns:
+        float: Calculated horizontal threshold
+    """
+    if not text_lines:
+        return 12.0  # Default value if no lines
+        
+    # Calculate horizontal distances between consecutive components in each line
+    distances = []
+    for line in text_lines:
+        if len(line) < 2:
+            continue
+            
+        # Sort components in line by x-coordinate
+        sorted_components = sorted(line, key=lambda idx: components[idx].bbox[0])
+        
+        for i in range(len(sorted_components) - 1):
+            current_idx = sorted_components[i]
+            next_idx = sorted_components[i + 1]
+            
+            # Get right edge of current component and left edge of next component
+            current_right = components[current_idx].bbox[0] + components[current_idx].bbox[2]
+            next_left = components[next_idx].bbox[0]
+            
+            distance = abs(next_left - current_right)
+            if distance > 0:  # Only include positive distances
+                distances.append(distance)
+    
+    if not distances:
+        return 12.0
+        
+    # Create histogram of distances
+    hist, bins = np.histogram(distances, bins='auto')
+    
+    # Find the most common distance range
+    peak_idx = np.argmax(hist)
+    most_common_distance = (bins[peak_idx] + bins[peak_idx + 1]) / 2
+    
+    # Use a larger safety factor  for horizontal distances to account for varying word spacing
+    return most_common_distance * 3.0
+
+
+
+
 def remove_small_components(binary_image, k = 7):
     """
     Remove connected components smaller than a given size.
@@ -36,13 +98,6 @@ def remove_small_components(binary_image, k = 7):
     
     return output_image
 
-
-@dataclass
-class Component:
-    """Class to store connected component information"""
-    bbox: Tuple[int, int, int, int]  # x, y, w, h
-    centroid: Tuple[float, float]
-    area: int
 
 class Docstrum:
     def __init__(self, k_nearest: int = 5, angle_threshold: float = 30):
@@ -319,6 +374,8 @@ class Docstrum:
         Returns:
             List of merged blocks
         """
+
+        
         def get_block_bounds(block):
             """Get the bounding box of a block"""
             block_components = [comp_idx for line in block for comp_idx in line]
@@ -378,11 +435,33 @@ class Docstrum:
             
             return overlap >= min_width * tolerance
 
+        def get_line_idx_for_block(block, text_lines):
+            """Find the line index that contains the most components from this block"""
+            block_components = set(comp_idx for line in block for comp_idx in line)
+            max_overlap = 0
+            best_line_idx = 0
+            
+            for line_idx, line in enumerate(text_lines):
+                overlap = len(block_components.intersection(set(line)))
+                if overlap > max_overlap:
+                    max_overlap = overlap
+                    best_line_idx = line_idx
+            
+            return best_line_idx if max_overlap > 0 else None
+
+        # Handle automatic horizontal threshold calculation
+        if horizontal_distance_threshold == -1:
+            # Flatten blocks into lines for threshold calculation
+            all_lines = [comp_idx for block in blocks for line in block for comp_idx in line]
+            line_thresholds = calculate_line_horizontal_thresholds([all_lines], components)
+        else:
+            # Use fixed threshold for all lines
+            line_thresholds = {i: horizontal_distance_threshold for i in range(len(blocks))}
+
         while True:
             merged = False
             block_bounds = [get_block_bounds(block) for block in blocks]
             
-            # Check each pair of blocks
             for i in range(len(blocks)):
                 if i >= len(blocks):  # Check if block was removed
                     continue
@@ -398,34 +477,23 @@ class Docstrum:
                         continue
                     
                     should_merge = False
-                    merge_order = 0  # 0: normal merge, -1: i into j, 1: j into i
                     
-                    # First check containment
-                    containment = check_block_containment(bounds1, bounds2)
-                    if containment != 0:
-                        should_merge = True
-                        merge_order = containment
-                    else:
-                        # Check horizontal merging (same line)
-                        if blocks_are_in_same_line(bounds1, bounds2) and \
-                        horizontal_distance(bounds1, bounds2) <= horizontal_distance_threshold:
-                            should_merge = True
+                    # Check if blocks are in the same line
+                    if blocks_are_in_same_line(bounds1, bounds2):
+                        # Get appropriate threshold for this line
+                        line_idx = get_line_idx_for_block(blocks[i], text_lines)
+                        threshold = line_thresholds.get(line_idx, horizontal_distance_threshold)
                         
-                        # Check vertical merging if not just_lines
-                        elif not just_lines and \
-                            vertical_distance(bounds1, bounds2) <= vertical_distance_threshold and \
-                            horizontal_overlap_exists(bounds1, bounds2):
+                        if horizontal_distance(bounds1, bounds2) <= threshold:
                             should_merge = True
+                    # Check vertical merging if not just_lines
+                    elif not just_lines and vertical_distance(bounds1, bounds2) <= vertical_distance_threshold:
+                        should_merge = True
                     
                     if should_merge:
-                        if merge_order == -1:  # bounds1 is contained within bounds2
-                            blocks[j].extend(blocks[i])
-                            blocks.pop(i)
-                            block_bounds.pop(i)
-                        else:  # bounds2 is contained within bounds1 or normal merge
-                            blocks[i].extend(blocks[j])
-                            blocks.pop(j)
-                            block_bounds.pop(j)
+                        blocks[i].extend(blocks[j])
+                        blocks.pop(j)
+                        block_bounds.pop(j)
                         merged = True
                         break
                 
@@ -808,6 +876,50 @@ def visualize_initial_blocks(image: np.ndarray, components: List[Component],
     plt.axis('off')
     plt.show()
 
+def calculate_vertical_threshold(text_lines: List[List[int]], components: List[Component]) -> float:
+    """
+    Calculate optimal vertical threshold based on line spacing histogram
+    
+    Args:
+        text_lines: List of text lines (each line is a list of component indices)
+        components: List of components
+        
+    Returns:
+        float: Calculated vertical threshold
+    """
+    if len(text_lines) < 2:
+        return 7.0  # Default value if insufficient lines
+        
+    # Calculate vertical distances between consecutive lines
+    distances = []
+    for i in range(len(text_lines) - 1):
+        current_line = text_lines[i]
+        next_line = text_lines[i + 1]
+        
+        # Get bottom of current line and top of next line
+        current_bottom = max(components[idx].bbox[1] + components[idx].bbox[3] for idx in current_line)
+        next_top = min(components[idx].bbox[1] for idx in next_line)
+        
+        distances.append(next_top - current_bottom)
+    
+    if not distances:
+        return 7.0
+        
+    # Create histogram of distances
+    hist, bins = np.histogram(distances, bins='auto')
+    
+    # Find the most common distance range
+    peak_idx = np.argmax(hist)
+    most_common_distance = abs(bins[peak_idx] + bins[peak_idx + 1]) / 2
+    
+    # Apply a safety factor  to account for slight variations
+    return most_common_distance * 1.2
+
+
+
+
+
+
 
 def process_and_save_visualization(image: np.ndarray, output_dir: str, filename: str, 
                                  docstrum: Docstrum, spacing_factor: float, 
@@ -837,6 +949,17 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     orientation = docstrum.estimate_orientation(neighbors_info)
     text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
     initial_blocks = docstrum.find_blocks(components, text_lines)
+
+
+    if vertical_distance_threshold == -1:
+        vertical_distance_threshold = calculate_vertical_threshold(text_lines, components)
+        print(f"Automatically calculated vertical threshold: {vertical_distance_threshold:.2f}")
+    
+    # if horizontal_distance_threshold == -1:
+    #     horizontal_distance_threshold = calculate_horizontal_threshold(text_lines, components)
+    #     print(f"Automatically calculated horizontal threshold: {horizontal_distance_threshold:.2f}")
+    
+
     merged_blocks = docstrum.merge_overlapping_blocks(
         components, initial_blocks, 
         horizontal_distance_threshold=horizontal_distance_threshold,
@@ -886,9 +1009,8 @@ def main():
                        help='Factor to multiply local intercharacter space for max allowed gap (default: 1.2)')
     parser.add_argument('--horizontal_distance_threshold', type=float, default=12,
                        help='Maximum horizontal distance between blocks to merge them (default: 12)')
-     # todo -1 automatic (histogam)
-    parser.add_argument('--vertical_distance_threshold', type=float, default=7,
-                       help='Maximum vertical distance between blocks to merge them (default: 7), not needed for lines')
+    parser.add_argument('--vertical_distance_threshold', type=float, default= -1,
+                       help='Maximum vertical distance between blocks to merge them (default: -1), -1 to use the calculate the threshold automaticaly, not needed for lines')
     parser.add_argument('--just_lines', action='store_true', default=False,
                        help='If True, only merge blocks in the same line (default: False)')
     

@@ -11,6 +11,70 @@ import matplotlib
 matplotlib.use('Agg')
 
 
+
+
+@dataclass
+class Component:
+    """Class to store connected component information"""
+    bbox: Tuple[int, int, int, int]  # x, y, w, h
+    centroid: Tuple[float, float]
+    area: int
+
+
+def calculate_line_horizontal_thresholds(text_lines: List[List[int]], components: List[Component]) -> Dict[int, float]:
+    """
+    Calculate optimal horizontal threshold for each line based on component spacing
+    
+    Args:
+        text_lines: List of text lines (each line is a list of component indices)
+        components: List of components
+        
+    Returns:
+        Dict[int, float]: Dictionary mapping line index to its horizontal threshold
+    """
+    line_thresholds = {}
+    
+    for line_idx, line in enumerate(text_lines):
+        if len(line) < 2:
+            line_thresholds[line_idx] = 12.0  # Default value for short lines
+            continue
+            
+        # Calculate distances between consecutive components in this line
+        distances = []
+        # Sort components in line by x-coordinate
+        sorted_components = sorted(line, key=lambda idx: components[idx].bbox[0])
+        
+        for i in range(len(sorted_components) - 1):
+            current_idx = sorted_components[i]
+            next_idx = sorted_components[i + 1]
+            
+            # Get right edge of current component and left edge of next component
+            current_right = components[current_idx].bbox[0] + components[current_idx].bbox[2]
+            next_left = components[next_idx].bbox[0]
+            
+            distance = abs(next_left - current_right)
+            if distance > 0:  # Only include positive distances
+                distances.append(distance)
+        
+        if not distances:
+            line_thresholds[line_idx] = 12.0  # Default value if no valid distances
+            continue
+        
+        # Create histogram of distances for this line
+        hist, bins = np.histogram(distances, bins='auto')
+        
+        # Find the most common distance range for this line
+        peak_idx = np.argmax(hist)
+        most_common_distance = (bins[peak_idx] + bins[peak_idx + 1]) / 2
+        
+        # Use safety factor of 2.0 for word spacing
+        line_thresholds[line_idx] = most_common_distance * 2.0
+    
+    return line_thresholds
+
+
+
+
 def remove_small_components(binary_image, k = 7):
     """
     Remove connected components smaller than a given size.
@@ -36,13 +100,6 @@ def remove_small_components(binary_image, k = 7):
     
     return output_image
 
-
-@dataclass
-class Component:
-    """Class to store connected component information"""
-    bbox: Tuple[int, int, int, int]  # x, y, w, h
-    centroid: Tuple[float, float]
-    area: int
 
 class Docstrum:
     def __init__(self, k_nearest: int = 5, angle_threshold: float = 30):
@@ -297,22 +354,21 @@ class Docstrum:
         text_lines.sort(key=lambda line: min(components[idx].centroid[1] for idx in line))
         
         return text_lines
+    
 
     def merge_overlapping_blocks(self, components: List[Component], blocks: List[List[List[int]]], 
                                 horizontal_distance_threshold: float = 50,
                                 vertical_distance_threshold: float = 50,
                                 just_lines: bool = True) -> List[List[List[int]]]:
         """
-        Merge blocks based on configuration:
+        Merge blocks based on configuration and containment:
+        - Merge blocks that are contained within other blocks
         - If just_lines is True: only merge blocks in the same line that are horizontally close
         - If just_lines is False: also merge blocks that are vertically close
         
         Args:
             components: List of components
-            blocks: List of blocks (each block contains one text line)
-            overlap_threshold: Not used in this version
-            alignment_threshold: Not used in this version
-            corner_threshold: Not used in this version
+            blocks: List of blocks (each block contains text lines)
             horizontal_distance_threshold: Maximum allowed horizontal distance between blocks to merge
             vertical_distance_threshold: Maximum allowed vertical distance between blocks to merge
             just_lines: If True, only merge blocks in the same line
@@ -320,6 +376,8 @@ class Docstrum:
         Returns:
             List of merged blocks
         """
+
+        
         def get_block_bounds(block):
             """Get the bounding box of a block"""
             block_components = [comp_idx for line in block for comp_idx in line]
@@ -351,11 +409,8 @@ class Docstrum:
             x1, _, x2, _ = bounds1
             x3, _, x4, _ = bounds2
             
-            # If blocks overlap horizontally, distance is 0
             if x2 >= x3 and x1 <= x4:
                 return 0
-                
-            # Otherwise, return the minimum distance between edges
             return min(abs(x2 - x3), abs(x1 - x4))
 
         def vertical_distance(bounds1, bounds2):
@@ -363,11 +418,8 @@ class Docstrum:
             _, y1, _, y2 = bounds1
             _, y3, _, y4 = bounds2
             
-            # If blocks overlap vertically, distance is 0
             if y2 >= y3 and y1 <= y4:
                 return 0
-                
-            # Otherwise, return the minimum distance between edges
             return min(abs(y2 - y3), abs(y1 - y4))
 
         def horizontal_overlap_exists(bounds1, bounds2, tolerance=0.3):
@@ -375,23 +427,43 @@ class Docstrum:
             x1, _, x2, _ = bounds1
             x3, _, x4, _ = bounds2
             
-            # Calculate overlap
             overlap = min(x2, x4) - max(x1, x3)
             if overlap <= 0:
                 return False
                 
-            # Calculate minimum width
             width1 = x2 - x1
             width2 = x4 - x3
             min_width = min(width1, width2)
             
             return overlap >= min_width * tolerance
 
+        def get_line_idx_for_block(block, text_lines):
+            """Find the line index that contains the most components from this block"""
+            block_components = set(comp_idx for line in block for comp_idx in line)
+            max_overlap = 0
+            best_line_idx = 0
+            
+            for line_idx, line in enumerate(text_lines):
+                overlap = len(block_components.intersection(set(line)))
+                if overlap > max_overlap:
+                    max_overlap = overlap
+                    best_line_idx = line_idx
+            
+            return best_line_idx if max_overlap > 0 else None
+
+        # Handle automatic horizontal threshold calculation
+        if horizontal_distance_threshold == -1:
+            # Flatten blocks into lines for threshold calculation
+            all_lines = [comp_idx for block in blocks for line in block for comp_idx in line]
+            line_thresholds = calculate_line_horizontal_thresholds([all_lines], components)
+        else:
+            # Use fixed threshold for all lines
+            line_thresholds = {i: horizontal_distance_threshold for i in range(len(blocks))}
+
         while True:
             merged = False
             block_bounds = [get_block_bounds(block) for block in blocks]
             
-            # Check each pair of blocks
             for i in range(len(blocks)):
                 if i >= len(blocks):  # Check if block was removed
                     continue
@@ -408,35 +480,20 @@ class Docstrum:
                     
                     should_merge = False
                     
-                    # Check horizontal merging (same line)
-                    if blocks_are_in_same_line(bounds1, bounds2) and \
-                    horizontal_distance(bounds1, bounds2) <= horizontal_distance_threshold:
-                        should_merge = True
-                    
+                    # Check if blocks are in the same line
+                    if blocks_are_in_same_line(bounds1, bounds2):
+                        # Get appropriate threshold for this line
+                        line_idx = get_line_idx_for_block(blocks[i], text_lines)
+                        threshold = line_thresholds.get(line_idx, horizontal_distance_threshold)
+                        
+                        if horizontal_distance(bounds1, bounds2) <= threshold:
+                            should_merge = True
                     # Check vertical merging if not just_lines
-                    elif not just_lines and \
-                        vertical_distance(bounds1, bounds2) <= vertical_distance_threshold and \
-                        horizontal_overlap_exists(bounds1, bounds2):
+                    elif not just_lines and vertical_distance(bounds1, bounds2) <= vertical_distance_threshold:
                         should_merge = True
                     
                     if should_merge:
-                        # Determine merge order based on position
-                        if just_lines:
-                            # For same-line merging, use horizontal position
-                            if bounds1[0] <= bounds2[0]:
-                                blocks[i].extend(blocks[j])
-                            else:
-                                blocks[j].extend(blocks[i])
-                                blocks[i] = blocks[j]
-                        else:
-                            # For vertical merging, use vertical position
-                            if bounds1[1] <= bounds2[1]:
-                                blocks[i].extend(blocks[j])
-                            else:
-                                blocks[j].extend(blocks[i])
-                                blocks[i] = blocks[j]
-                        
-                        # Remove the second block
+                        blocks[i].extend(blocks[j])
                         blocks.pop(j)
                         block_bounds.pop(j)
                         merged = True
@@ -589,6 +646,46 @@ class Docstrum:
         return blocks
 
 
+
+def check_block_containment(bounds1, bounds2, tolerance=0.9):
+    """
+    Check if one block is contained within another block
+    
+    Args:
+        bounds1: (min_x1, min_y1, max_x1, max_y1) of first block
+        bounds2: (min_x2, min_y2, max_x2, max_y2) of second block
+        tolerance: How much overlap is required to consider it containment (0-1)
+        
+    Returns:
+        -1 if bounds1 is contained within bounds2
+        1 if bounds2 is contained within bounds1
+        0 if no containment
+    """
+    x1, y1, x2, y2 = bounds1
+    x3, y3, x4, y4 = bounds2
+    
+    # Calculate areas
+    area1 = (x2 - x1) * (y2 - y1)
+    area2 = (x4 - x3) * (y4 - y3)
+    
+    # Calculate intersection
+    x_left = max(x1, x3)
+    y_top = max(y1, y3)
+    x_right = min(x2, x4)
+    y_bottom = min(y2, y4)
+    
+    if x_right <= x_left or y_bottom <= y_top:
+        return 0
+        
+    intersection_area = (x_right - x_left) * (y_bottom - y_top)
+    
+    # Check if one block is contained within the other
+    if intersection_area >= area1 * tolerance:
+        return -1  # bounds1 is contained within bounds2
+    elif intersection_area >= area2 * tolerance:
+        return 1  # bounds2 is contained within bounds1
+    
+    return 0
 
 
 def visualize_preprocessing(image: np.ndarray, binary: np.ndarray):
@@ -781,6 +878,50 @@ def visualize_initial_blocks(image: np.ndarray, components: List[Component],
     plt.axis('off')
     plt.show()
 
+def calculate_vertical_threshold(text_lines: List[List[int]], components: List[Component]) -> float:
+    """
+    Calculate optimal vertical threshold based on line spacing histogram
+    
+    Args:
+        text_lines: List of text lines (each line is a list of component indices)
+        components: List of components
+        
+    Returns:
+        float: Calculated vertical threshold
+    """
+    if len(text_lines) < 2:
+        return 7.0  # Default value if insufficient lines
+        
+    # Calculate vertical distances between consecutive lines
+    distances = []
+    for i in range(len(text_lines) - 1):
+        current_line = text_lines[i]
+        next_line = text_lines[i + 1]
+        
+        # Get bottom of current line and top of next line
+        current_bottom = max(components[idx].bbox[1] + components[idx].bbox[3] for idx in current_line)
+        next_top = min(components[idx].bbox[1] for idx in next_line)
+        
+        distances.append(next_top - current_bottom)
+    
+    if not distances:
+        return 7.0
+        
+    # Create histogram of distances
+    hist, bins = np.histogram(distances, bins='auto')
+    
+    # Find the most common distance range
+    peak_idx = np.argmax(hist)
+    most_common_distance = abs(bins[peak_idx] + bins[peak_idx + 1]) / 2
+    
+    # Apply a safety factor  to account for slight variations
+    return most_common_distance * 1.2
+
+
+
+
+
+
 
 def process_and_save_visualization(image: np.ndarray, output_dir: str, filename: str, 
                                  docstrum: Docstrum, spacing_factor: float, 
@@ -810,6 +951,17 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     orientation = docstrum.estimate_orientation(neighbors_info)
     text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
     initial_blocks = docstrum.find_blocks(components, text_lines)
+
+
+    if vertical_distance_threshold == -1:
+        vertical_distance_threshold = calculate_vertical_threshold(text_lines, components)
+        print(f"Automatically calculated vertical threshold: {vertical_distance_threshold:.2f}")
+    
+    # if horizontal_distance_threshold == -1:
+    #     horizontal_distance_threshold = calculate_horizontal_threshold(text_lines, components)
+    #     print(f"Automatically calculated horizontal threshold: {horizontal_distance_threshold:.2f}")
+    
+
     merged_blocks = docstrum.merge_overlapping_blocks(
         components, initial_blocks, 
         horizontal_distance_threshold=horizontal_distance_threshold,
@@ -844,147 +996,6 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     cv2.imwrite(output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
     
     return components, text_lines, orientation, merged_blocks
-
-
-
-def calculate_distance_thresholds(components: List[Component]) -> Tuple[float, float]:
-    """
-    Calculate appropriate horizontal and vertical distance thresholds based on component statistics
-    
-    Args:
-        components: List of components
-        
-    Returns:
-        Tuple of (horizontal_distance_threshold, vertical_distance_threshold)
-    """
-    # Calculate median component dimensions
-    widths = [comp.bbox[2] for comp in components]
-    heights = [comp.bbox[3] for comp in components]
-    
-    median_width = np.median(widths)
-    median_height = np.median(heights)
-    
-    # Calculate horizontal gaps between components
-    horizontal_gaps = []
-    vertical_gaps = []
-    
-    # Sort components by x coordinate for horizontal gap calculation
-    sorted_by_x = sorted(components, key=lambda c: c.bbox[0])
-    # Sort components by y coordinate for vertical gap calculation
-    sorted_by_y = sorted(components, key=lambda c: c.bbox[1])
-    
-    # Calculate horizontal gaps
-    for i in range(len(sorted_by_x) - 1):
-        curr_comp = sorted_by_x[i]
-        next_comp = sorted_by_x[i + 1]
-        
-        # Calculate gap between current component's right edge and next component's left edge
-        gap = next_comp.bbox[0] - (curr_comp.bbox[0] + curr_comp.bbox[2])
-        if gap > 0 and gap < median_width * 5:  # Filter out extremely large gaps
-            horizontal_gaps.append(gap)
-    
-    # Calculate vertical gaps
-    for i in range(len(sorted_by_y) - 1):
-        curr_comp = sorted_by_y[i]
-        next_comp = sorted_by_y[i + 1]
-        
-        # Calculate gap between current component's bottom edge and next component's top edge
-        gap = next_comp.bbox[1] - (curr_comp.bbox[1] + curr_comp.bbox[3])
-        if gap > 0 and gap < median_height * 5:  # Filter out extremely large gaps
-            vertical_gaps.append(gap)
-    
-    # Calculate thresholds based on gap statistics
-    if horizontal_gaps:
-        # Use median + 1.5 * IQR for horizontal threshold
-        horizontal_gaps = np.array(horizontal_gaps)
-        horizontal_q75, horizontal_q25 = np.percentile(horizontal_gaps, [75, 25])
-        horizontal_iqr = horizontal_q75 - horizontal_q25
-        horizontal_threshold = horizontal_q75 + 3.0 * horizontal_iqr
-        # Cap the threshold to a reasonable multiple of median width
-        horizontal_threshold = min(horizontal_threshold, median_width * 7)
-    else:
-        horizontal_threshold = median_width * 2
-    
-    if vertical_gaps:
-        # Use median + 1.5 * IQR for vertical threshold
-        vertical_gaps = np.array(vertical_gaps)
-        vertical_q75, vertical_q25 = np.percentile(vertical_gaps, [75, 25])
-        vertical_iqr = vertical_q75 - vertical_q25
-        vertical_threshold = vertical_q75 + 2.0 * vertical_iqr
-        # Cap the threshold to a reasonable multiple of median height
-        vertical_threshold = min(vertical_threshold, median_height * 5)
-    else:
-        vertical_threshold = median_height * 1.5
-    
-    return horizontal_threshold, vertical_threshold
-
-
-
-
-def process_and_save_visualization(image: np.ndarray, output_dir: str, filename: str, 
-                                 docstrum: Docstrum, spacing_factor: float, 
-                                 just_lines: bool):
-    """
-    Process an image and save final visualization with automatic threshold calculation
-    
-    Args:
-        image: Input grayscale image
-        output_dir: Directory to save visualization
-        filename: Base filename for saving visualization
-        docstrum: Initialized Docstrum object
-        spacing_factor: Factor to multiply local intercharacter space for max allowed gap
-        just_lines: If True, only merge blocks in the same line
-    """
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Process image
-    binary = docstrum.preprocess(image)
-    components = docstrum.find_connected_components(binary)
-    
-    # Calculate automatic thresholds
-    horizontal_threshold, vertical_threshold = calculate_distance_thresholds(components)
-    
-    # Continue processing
-    neighbors_info = docstrum.find_nearest_neighbors(components)
-    orientation = docstrum.estimate_orientation(neighbors_info)
-    text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
-    initial_blocks = docstrum.find_blocks(components, text_lines)
-    merged_blocks = docstrum.merge_overlapping_blocks(
-        components, initial_blocks, 
-        horizontal_distance_threshold=horizontal_threshold,
-        vertical_distance_threshold=vertical_threshold,
-        just_lines=just_lines
-    )
-    
-    # Create visualization (rest of the function remains the same)
-    vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
-    colors = plt.cm.Set3(np.linspace(0, 1, len(merged_blocks)))
-    colors = (colors[:, :3] * 255).astype(int)
-    
-    for block_idx, block in enumerate(merged_blocks):
-        block_components = [comp_idx for line in block for comp_idx in line]
-        if not block_components:
-            continue
-        
-        min_x = min(components[idx].bbox[0] for idx in block_components)
-        min_y = min(components[idx].bbox[1] for idx in block_components)
-        max_x = max(components[idx].bbox[0] + components[idx].bbox[2] for idx in block_components)
-        max_y = max(components[idx].bbox[1] + components[idx].bbox[3] for idx in block_components)
-        
-        color = colors[block_idx % len(colors)].tolist()
-        padding = 3
-        cv2.rectangle(vis_image, 
-                     (min_x - padding, min_y - padding), 
-                     (max_x + padding, max_y + padding), 
-                     color, 2)
-    
-    # Save the visualization
-    output_path = os.path.join(output_dir, f'{filename}_blocks.png')
-    cv2.imwrite(output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
-    
-    return components, text_lines, orientation, merged_blocks, horizontal_threshold, vertical_threshold
-
 def main():
     parser = argparse.ArgumentParser(description='Run Docstrum page layout analysis on images.')
     parser.add_argument('input_path', type=str, 
@@ -995,10 +1006,17 @@ def main():
                        help='Number of nearest neighbors (default: 5)')
     parser.add_argument('--angle_threshold', type=float, default=30, 
                        help='Angle threshold in degrees (default: 30)')
-    parser.add_argument('--spacing_factor', type=float, default=1.2,
+    # the default spacing factor (1.2) works well for most cases if it doesn't work well for your images, you can try to adjust horizontal_distance_threshold, it was left as a parameter for flexibility for some edge cases
+    parser.add_argument('--spacing_factor', type=float, default=1.2,  
                        help='Factor to multiply local intercharacter space for max allowed gap (default: 1.2)')
+    parser.add_argument('--horizontal_distance_threshold', type=float, default=12,
+                       help='Maximum horizontal distance between blocks to merge them (default: 12)')
+    parser.add_argument('--vertical_distance_threshold', type=float, default= -1,
+                       help='Maximum vertical distance between blocks to merge them (default: -1), -1 to use the calculate the threshold automaticaly, not needed for lines')
     parser.add_argument('--just_lines', action='store_true', default=False,
                        help='If True, only merge blocks in the same line (default: False)')
+    
+
     
     args = parser.parse_args()
     
@@ -1015,9 +1033,11 @@ def main():
         
         filename = os.path.splitext(os.path.basename(args.input_path))[0]
         try:
-            components, text_lines, orientation, blocks, h_threshold, v_threshold = process_and_save_visualization(
+            components, text_lines, orientation, blocks = process_and_save_visualization(
                 image, args.output_dir, filename, docstrum, 
-                args.spacing_factor,
+                args.spacing_factor, 
+                args.horizontal_distance_threshold,
+                args.vertical_distance_threshold,
                 args.just_lines
             )
             print(f"Processed {filename}:")
@@ -1025,7 +1045,6 @@ def main():
             print(f"- Grouped into {len(text_lines)} text lines")
             print(f"- Detected {len(blocks)} text blocks")
             print(f"- Estimated orientation: {orientation:.1f} degrees")
-            print(f"- Calculated thresholds: horizontal={h_threshold:.1f}, vertical={v_threshold:.1f}")
             print(f"- Merge mode: {'line-only' if args.just_lines else 'lines and vertical'}")
             print(f"- Saved visualization to {args.output_dir}")
             
@@ -1050,9 +1069,11 @@ def main():
                 
                 base_filename = os.path.splitext(filename)[0]
                 try:
-                    components, text_lines, orientation, blocks, h_threshold, v_threshold = process_and_save_visualization(
+                    components, text_lines, orientation, blocks = process_and_save_visualization(
                         image, args.output_dir, base_filename, docstrum,
                         args.spacing_factor,
+                        args.horizontal_distance_threshold,
+                        args.vertical_distance_threshold,
                         args.just_lines
                     )
                     print(f"Processed {filename}:")
@@ -1060,7 +1081,6 @@ def main():
                     print(f"- Grouped into {len(text_lines)} text lines")
                     print(f"- Detected {len(blocks)} text blocks")
                     print(f"- Estimated orientation: {orientation:.1f} degrees")
-                    print(f"- Calculated thresholds: horizontal={h_threshold:.1f}, vertical={v_threshold:.1f}")
                     print(f"- Merge mode: {'line-only' if args.just_lines else 'lines and vertical'}")
                     processed += 1
                     
@@ -1079,6 +1099,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 

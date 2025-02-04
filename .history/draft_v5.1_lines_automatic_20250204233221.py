@@ -808,6 +808,96 @@ def visualize_initial_blocks(image: np.ndarray, components: List[Component],
     plt.axis('off')
     plt.show()
 
+def calculate_vertical_threshold(text_lines: List[List[int]], components: List[Component]) -> float:
+    """
+    Calculate optimal vertical threshold based on line spacing histogram
+    
+    Args:
+        text_lines: List of text lines (each line is a list of component indices)
+        components: List of components
+        
+    Returns:
+        float: Calculated vertical threshold
+    """
+    if len(text_lines) < 2:
+        return 7.0  # Default value if insufficient lines
+        
+    # Calculate vertical distances between consecutive lines
+    distances = []
+    for i in range(len(text_lines) - 1):
+        current_line = text_lines[i]
+        next_line = text_lines[i + 1]
+        
+        # Get bottom of current line and top of next line
+        current_bottom = max(components[idx].bbox[1] + components[idx].bbox[3] for idx in current_line)
+        next_top = min(components[idx].bbox[1] for idx in next_line)
+        
+        distances.append(next_top - current_bottom)
+    
+    if not distances:
+        return 7.0
+        
+    # Create histogram of distances
+    hist, bins = np.histogram(distances, bins='auto')
+    
+    # Find the most common distance range
+    peak_idx = np.argmax(hist)
+    most_common_distance = abs(bins[peak_idx] + bins[peak_idx + 1]) / 2
+    
+    # Apply a safety factor  to account for slight variations
+    return most_common_distance * 1.2
+
+
+# def calculate_horizontal_threshold(text_lines: List[List[int]], components: List[Component]) -> float:
+#     """
+#     Calculate optimal horizontal threshold based on within-line spacing histogram
+    
+#     Args:
+#         text_lines: List of text lines (each line is a list of component indices)
+#         components: List of components
+        
+#     Returns:
+#         float: Calculated horizontal threshold
+#     """
+#     if not text_lines:
+#         return 12.0  # Default value if no lines
+        
+#     # Calculate horizontal distances between consecutive components in each line
+#     distances = []
+#     for line in text_lines:
+#         if len(line) < 2:
+#             continue
+            
+#         # Sort components in line by x-coordinate
+#         sorted_components = sorted(line, key=lambda idx: components[idx].bbox[0])
+        
+#         for i in range(len(sorted_components) - 1):
+#             current_idx = sorted_components[i]
+#             next_idx = sorted_components[i + 1]
+            
+#             # Get right edge of current component and left edge of next component
+#             current_right = components[current_idx].bbox[0] + components[current_idx].bbox[2]
+#             next_left = components[next_idx].bbox[0]
+            
+#             distance = abs(next_left - current_right)
+#             if distance > 0:  # Only include positive distances
+#                 distances.append(distance)
+    
+#     if not distances:
+#         return 12.0
+        
+    # Create histogram of distances
+    hist, bins = np.histogram(distances, bins='auto')
+    
+    # Find the most common distance range
+    peak_idx = np.argmax(hist)
+    most_common_distance = (bins[peak_idx] + bins[peak_idx + 1]) / 2
+    
+    # Use a larger safety factor  for horizontal distances to account for varying word spacing
+    return most_common_distance * 3.0
+
+
+
 
 def process_and_save_visualization(image: np.ndarray, output_dir: str, filename: str, 
                                  docstrum: Docstrum, spacing_factor: float, 
@@ -837,6 +927,17 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     orientation = docstrum.estimate_orientation(neighbors_info)
     text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
     initial_blocks = docstrum.find_blocks(components, text_lines)
+
+
+    if vertical_distance_threshold == -1:
+        vertical_distance_threshold = calculate_vertical_threshold(text_lines, components)
+        print(f"Automatically calculated vertical threshold: {vertical_distance_threshold:.2f}")
+    
+    # if horizontal_distance_threshold == -1:
+    #     horizontal_distance_threshold = calculate_horizontal_threshold(text_lines, components)
+    #     print(f"Automatically calculated horizontal threshold: {horizontal_distance_threshold:.2f}")
+    
+
     merged_blocks = docstrum.merge_overlapping_blocks(
         components, initial_blocks, 
         horizontal_distance_threshold=horizontal_distance_threshold,
@@ -886,9 +987,8 @@ def main():
                        help='Factor to multiply local intercharacter space for max allowed gap (default: 1.2)')
     parser.add_argument('--horizontal_distance_threshold', type=float, default=12,
                        help='Maximum horizontal distance between blocks to merge them (default: 12)')
-     # todo -1 automatic (histogam)
-    parser.add_argument('--vertical_distance_threshold', type=float, default=7,
-                       help='Maximum vertical distance between blocks to merge them (default: 7), not needed for lines')
+    parser.add_argument('--vertical_distance_threshold', type=float, default= -1,
+                       help='Maximum vertical distance between blocks to merge them (default: -1), -1 to use the calculate the threshold automaticaly, not needed for lines')
     parser.add_argument('--just_lines', action='store_true', default=False,
                        help='If True, only merge blocks in the same line (default: False)')
     
