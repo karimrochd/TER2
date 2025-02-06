@@ -67,8 +67,8 @@ def calculate_line_horizontal_thresholds(text_lines: List[List[int]], components
         peak_idx = np.argmax(hist)
         most_common_distance = (bins[peak_idx] + bins[peak_idx + 1]) / 2
         
-        # Use safety factor for word spacing
-        line_thresholds[line_idx] = most_common_distance * 1.1
+        # Use safety factor of 2.0 for word spacing
+        line_thresholds[line_idx] = most_common_distance * 1.2
     
     return line_thresholds
 

@@ -67,8 +67,8 @@ def calculate_line_horizontal_thresholds(text_lines: List[List[int]], components
         peak_idx = np.argmax(hist)
         most_common_distance = (bins[peak_idx] + bins[peak_idx + 1]) / 2
         
-        # Use safety factor for word spacing
-        line_thresholds[line_idx] = most_common_distance * 1.1
+        # Use safety factor of 2.0 for word spacing
+        line_thresholds[line_idx] = most_common_distance * 1.2
     
     return line_thresholds
 
@@ -455,7 +455,8 @@ class Docstrum:
         # Handle automatic horizontal threshold calculation
         if horizontal_distance_threshold == -1:
             # Flatten blocks into lines for threshold calculation
-            line_thresholds = calculate_line_horizontal_thresholds(text_lines, components)
+            all_lines = [comp_idx for block in blocks for line in block for comp_idx in line]
+            line_thresholds = calculate_line_horizontal_thresholds([all_lines], components)
         else:
             # Use fixed threshold for all lines
             line_thresholds = {i: horizontal_distance_threshold for i in range(len(blocks))}
@@ -489,7 +490,7 @@ class Docstrum:
                         if horizontal_distance(bounds1, bounds2) <= threshold:
                             should_merge = True
                     # Check vertical merging if not just_lines
-                    elif not just_lines and vertical_distance(bounds1, bounds2) <= vertical_distance_threshold:
+                    elif not just_lines and vertical_distance(bounds1, bounds2) <= vertical_distance_threshold and horizontal_overlap_exists(bounds1, bounds2):
                         should_merge = True
                     
                     if should_merge:
