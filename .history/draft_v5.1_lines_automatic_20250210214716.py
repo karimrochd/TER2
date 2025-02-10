@@ -980,8 +980,8 @@ def main():
                        help='Directory to save output visualizations (default: output)')
     parser.add_argument('--k_nearest', type=int, default=5, 
                        help='Number of nearest neighbors (default: 5)')
-    parser.add_argument('--angle_threshold', type=float, default=5, 
-                       help='Angle threshold in degrees (default: 5)')
+    parser.add_argument('--angle_threshold', type=float, default=30, 
+                       help='Angle threshold in degrees (default: 30)')
     # the default spacing factor (1.2) works well for most cases if it doesn't work well for your images, you can try to adjust horizontal_distance_threshold, it was left as a parameter for flexibility for some edge cases
     parser.add_argument('--spacing_factor', type=float, default=1.2,  
                        help='Factor to multiply local intercharacter space for max allowed gap (default: 1.2)')
