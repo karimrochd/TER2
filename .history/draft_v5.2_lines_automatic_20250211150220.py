@@ -617,10 +617,9 @@ def check_block_containment(bounds1, bounds2, tolerance=0.9):
     
     return 0
 
-
-def visualize_preprocessing(image: np.ndarray, binary: np.ndarray):
+def visualize_preprocessing(image: np.ndarray, binary: np.ndarray, output_dir: str, filename: str):
     """
-    Visualize the preprocessing step showing original and binary images side by side
+    Visualize and save the preprocessing step showing original and binary images side by side
     """
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
     
@@ -635,11 +634,15 @@ def visualize_preprocessing(image: np.ndarray, binary: np.ndarray):
     ax2.axis('off')
     
     plt.tight_layout()
-    plt.show()
+    
+    # Save the figure
+    output_path = os.path.join(output_dir, f'{filename}_preprocessing.png')
+    plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.close()
 
-def visualize_components(image: np.ndarray, components: List[Component]):
+def visualize_components(image: np.ndarray, components: List[Component], output_dir: str, filename: str):
     """
-    Visualize detected connected components with bounding boxes and centroids
+    Visualize and save detected connected components with bounding boxes and centroids
     """
     # Create RGB visualization image
     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
@@ -664,12 +667,17 @@ def visualize_components(image: np.ndarray, components: List[Component]):
     plt.imshow(vis_image)
     plt.title(f'Detected Components (Total: {len(components)})')
     plt.axis('off')
-    plt.show()
+    
+    # Save the figure
+    output_path = os.path.join(output_dir, f'{filename}_components.png')
+    plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.close()
 
 def visualize_neighbors(image: np.ndarray, components: List[Component], 
-                    neighbors_info: List[List[Tuple[int, float, float]]]):
+                    neighbors_info: List[List[Tuple[int, float, float]]], 
+                    output_dir: str, filename: str):
     """
-    Visualize k-nearest neighbors connections between components
+    Visualize and save k-nearest neighbors connections between components
     """
     # Create RGB visualization image
     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
@@ -697,12 +705,16 @@ def visualize_neighbors(image: np.ndarray, components: List[Component],
     plt.imshow(vis_image)
     plt.title('K-Nearest Neighbors Connections')
     plt.axis('off')
-    plt.show()
+    
+    # Save the figure
+    output_path = os.path.join(output_dir, f'{filename}_neighbors.png')
+    plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.close()
 
 def visualize_orientation_histogram(neighbors_info: List[List[Tuple[int, float, float]]], 
-                                orientation: float):
+                                orientation: float, output_dir: str, filename: str):
     """
-    Visualize histogram of angles and detected orientation
+    Visualize and save histogram of angles and detected orientation
     """
     # Collect all angles
     angles = []
@@ -728,12 +740,16 @@ def visualize_orientation_histogram(neighbors_info: List[List[Tuple[int, float, 
     plt.ylabel('Frequency')
     plt.legend()
     plt.grid(True, alpha=0.3)
-    plt.show()
+    
+    # Save the figure
+    output_path = os.path.join(output_dir, f'{filename}_orientation_histogram.png')
+    plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.close()
 
 def visualize_text_lines(image: np.ndarray, components: List[Component], 
-                        text_lines: List[List[int]]):
+                        text_lines: List[List[int]], output_dir: str, filename: str):
     """
-    Visualize detected text lines with different colors
+    Visualize and save detected text lines with different colors
     """
     # Create RGB visualization image
     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
@@ -763,12 +779,16 @@ def visualize_text_lines(image: np.ndarray, components: List[Component],
     plt.imshow(vis_image)
     plt.title(f'Detected Text Lines (Total: {len(text_lines)})')
     plt.axis('off')
-    plt.show()
+    
+    # Save the figure
+    output_path = os.path.join(output_dir, f'{filename}_text_lines.png')
+    plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.close()
 
 def visualize_initial_blocks(image: np.ndarray, components: List[Component], 
-                        blocks: List[List[List[int]]]):
+                        blocks: List[List[List[int]]], output_dir: str, filename: str):
     """
-    Visualize initial text blocks before merging
+    Visualize and save initial text blocks before merging
     """
     # Create RGB visualization image
     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
@@ -806,7 +826,11 @@ def visualize_initial_blocks(image: np.ndarray, components: List[Component],
     plt.imshow(vis_image)
     plt.title(f'Initial Text Blocks (Total: {len(blocks)})')
     plt.axis('off')
-    plt.show()
+    
+    # Save the figure
+    output_path = os.path.join(output_dir, f'{filename}_initial_blocks.png')
+    plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.close()
 
 def calculate_vertical_threshold(text_lines: List[List[int]], components: List[Component]) -> float:
     """
