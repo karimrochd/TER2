@@ -35,3 +35,30 @@
     - Saved visualization to output/lines
     ----------------------------------------
     
+    Processed test4:
+    - Found 2095 components
+    - Grouped into 874 text lines
+    - Detected 184 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/lines
+    ----------------------------------------
+    
+    Processed test4:
+    - Found 2095 components
+    - Grouped into 874 text lines
+    - Detected 142 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/lines
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 22 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/lines
+    ----------------------------------------
+    
