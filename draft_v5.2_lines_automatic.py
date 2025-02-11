@@ -104,7 +104,7 @@ class Docstrum:
         for i in range(1, num_labels):
             area = stats[i, cv2.CC_STAT_AREA]
             
-            # Filter out components that are too small or too large
+            # Filter out components that are too large
             if not big_component_threshold == -1 and area > big_component_threshold:
                 continue
                 
@@ -951,6 +951,102 @@ def log_processing_details(filename: str, components: list, text_lines: list, bl
         f.write(log_entry)
 
 
+# def process_and_save_visualization(image: np.ndarray, output_dir: str, filename: str, 
+#                                  docstrum: Docstrum, spacing_factor: float, 
+#                                  horizontal_distance_threshold: float,
+#                                  vertical_distance_threshold: float,
+#                                  small_component_threshold: int,
+#                                  big_component_threshold: int,
+#                                  just_lines: bool,
+#                                  log_file: str):
+#     """
+#     Process an image and save all visualizations including intermediate steps
+#     """
+#     # Create output directory if it doesn't exist
+#     os.makedirs(output_dir, exist_ok=True)
+    
+#     intermediate_dir = os.path.join(output_dir, f"{filename}_intermediate_steps")
+#     os.makedirs(intermediate_dir, exist_ok=True)
+
+#     # Process image and save intermediate visualizations
+#     binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold)
+#     visualize_preprocessing(image, binary, output_dir, filename)
+    
+#     components = docstrum.find_connected_components(binary, big_component_threshold)
+#     visualize_components(image, components, output_dir, filename)
+    
+#     neighbors_info = docstrum.find_nearest_neighbors(components)
+#     visualize_neighbors(image, components, neighbors_info, output_dir, filename)
+    
+#     orientation = docstrum.estimate_orientation(neighbors_info)
+#     visualize_orientation_histogram(neighbors_info, orientation, output_dir, filename)
+    
+#     text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
+#     visualize_text_lines(image, components, text_lines, output_dir, filename)
+    
+#     initial_blocks = docstrum.find_blocks(components, text_lines)
+#     visualize_initial_blocks(image, components, initial_blocks, output_dir, filename)
+
+#     if vertical_distance_threshold == -1:
+#         vertical_distance_threshold = calculate_vertical_threshold(text_lines, components)
+#         print(f"Automatically calculated vertical threshold: {vertical_distance_threshold:.2f}")
+
+#     merged_blocks = docstrum.merge_overlapping_blocks(
+#         components, initial_blocks, 
+#         horizontal_distance_threshold=horizontal_distance_threshold,
+#         vertical_distance_threshold=vertical_distance_threshold,
+#         just_lines=just_lines
+#     )
+    
+#     # Create final visualization
+#     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
+#     colors = plt.cm.Set3(np.linspace(0, 1, len(merged_blocks)))
+#     colors = (colors[:, :3] * 255).astype(int)
+    
+#     for block_idx, block in enumerate(merged_blocks):
+#         block_components = [comp_idx for line in block for comp_idx in line]
+#         if not block_components:
+#             continue
+        
+#         min_x = min(components[idx].bbox[0] for idx in block_components)
+#         min_y = min(components[idx].bbox[1] for idx in block_components)
+#         max_x = max(components[idx].bbox[0] + components[idx].bbox[2] for idx in block_components)
+#         max_y = max(components[idx].bbox[1] + components[idx].bbox[3] for idx in block_components)
+        
+#         color = colors[block_idx % len(colors)].tolist()
+#         padding = 3
+#         cv2.rectangle(vis_image, 
+#                      (min_x - padding, min_y - padding), 
+#                      (max_x + padding, max_y + padding), 
+#                      color, 2)
+    
+#     # Save the final visualization
+#     output_path = os.path.join(output_dir, f'{filename}_final_blocks.png')
+#     cv2.imwrite(output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
+    
+#     # Log processing details
+#     log_processing_details(filename, components, text_lines, merged_blocks, 
+#                          orientation, just_lines, output_dir, log_file)
+    
+#     # Print to console as well
+#     print(f"Processed {filename}:")
+#     print(f"- Found {len(components)} components")
+#     print(f"- Grouped into {len(text_lines)} text lines")
+#     print(f"- Detected {len(merged_blocks)} text blocks")
+#     print(f"- Estimated orientation: {orientation:.1f} degrees")
+#     print(f"- Merge mode: {'line-only' if just_lines else 'lines and vertical'}")
+#     print(f"- Saved visualizations to {output_dir}")
+#     print("  - Preprocessing visualization")
+#     print("  - Connected components visualization")
+#     print("  - K-nearest neighbors visualization")
+#     print("  - Orientation histogram")
+#     print("  - Text lines visualization")
+#     print("  - Initial blocks visualization")
+#     print("  - Final blocks visualization")
+    
+#     return components, text_lines, orientation, merged_blocks
+
+
 def process_and_save_visualization(image: np.ndarray, output_dir: str, filename: str, 
                                  docstrum: Docstrum, spacing_factor: float, 
                                  horizontal_distance_threshold: float,
@@ -962,30 +1058,31 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     """
     Process an image and save all visualizations including intermediate steps
     """
-    # Create output directory if it doesn't exist
+    # Create main output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
+    # Create intermediate steps directory for this specific image
     intermediate_dir = os.path.join(output_dir, f"{filename}_intermediate_steps")
     os.makedirs(intermediate_dir, exist_ok=True)
-
+    
     # Process image and save intermediate visualizations
     binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold)
-    visualize_preprocessing(image, binary, output_dir, filename)
+    visualize_preprocessing(image, binary, intermediate_dir, "01_preprocessing")
     
     components = docstrum.find_connected_components(binary, big_component_threshold)
-    visualize_components(image, components, output_dir, filename)
+    visualize_components(image, components, intermediate_dir, "02_components")
     
     neighbors_info = docstrum.find_nearest_neighbors(components)
-    visualize_neighbors(image, components, neighbors_info, output_dir, filename)
+    visualize_neighbors(image, components, neighbors_info, intermediate_dir, "03_neighbors")
     
     orientation = docstrum.estimate_orientation(neighbors_info)
-    visualize_orientation_histogram(neighbors_info, orientation, output_dir, filename)
+    visualize_orientation_histogram(neighbors_info, orientation, intermediate_dir, "04_orientation")
     
     text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
-    visualize_text_lines(image, components, text_lines, output_dir, filename)
+    visualize_text_lines(image, components, text_lines, intermediate_dir, "05_text_lines")
     
     initial_blocks = docstrum.find_blocks(components, text_lines)
-    visualize_initial_blocks(image, components, initial_blocks, output_dir, filename)
+    visualize_initial_blocks(image, components, initial_blocks, intermediate_dir, "06_initial_blocks")
 
     if vertical_distance_threshold == -1:
         vertical_distance_threshold = calculate_vertical_threshold(text_lines, components)
@@ -1020,31 +1117,38 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
                      (max_x + padding, max_y + padding), 
                      color, 2)
     
-    # Save the final visualization
-    output_path = os.path.join(output_dir, f'{filename}_final_blocks.png')
+    # Save the final visualization in the intermediate steps directory
+    output_path = os.path.join(intermediate_dir, "07_final_blocks.png")
     cv2.imwrite(output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
+    
+    # Also save a copy of the final visualization in the main output directory
+    final_output_path = os.path.join(output_dir, f'{filename}_final_blocks.png')
+    cv2.imwrite(final_output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
     
     # Log processing details
     log_processing_details(filename, components, text_lines, merged_blocks, 
                          orientation, just_lines, output_dir, log_file)
     
     # Print to console as well
-    print(f"Processed {filename}:")
+    print(f"\nProcessed {filename}:")
     print(f"- Found {len(components)} components")
     print(f"- Grouped into {len(text_lines)} text lines")
     print(f"- Detected {len(merged_blocks)} text blocks")
     print(f"- Estimated orientation: {orientation:.1f} degrees")
     print(f"- Merge mode: {'line-only' if just_lines else 'lines and vertical'}")
-    print(f"- Saved visualizations to {output_dir}")
-    print("  - Preprocessing visualization")
-    print("  - Connected components visualization")
-    print("  - K-nearest neighbors visualization")
-    print("  - Orientation histogram")
-    print("  - Text lines visualization")
-    print("  - Initial blocks visualization")
-    print("  - Final blocks visualization")
+    print(f"\nSaved visualizations:")
+    print(f"- Final result: {output_dir}/{filename}_final_blocks.png")
+    print(f"- Intermediate steps: {intermediate_dir}/")
+    print("  1. Preprocessing")
+    print("  2. Connected components")
+    print("  3. K-nearest neighbors")
+    print("  4. Orientation histogram")
+    print("  5. Text lines")
+    print("  6. Initial blocks")
+    print("  7. Final blocks")
     
     return components, text_lines, orientation, merged_blocks
+
 
 
 def main():
