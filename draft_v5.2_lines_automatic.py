@@ -37,6 +37,62 @@ def remove_small_components(binary_image, small_component_threshold = 7):
     return output_image
 
 
+
+def generate_distinct_colors(n_colors: int) -> np.ndarray:
+    """
+    Generate distinct, easily visible colors for block visualization
+    
+    Args:
+        n_colors: Number of colors needed
+        
+    Returns:
+        numpy.ndarray: Array of RGB colors scaled to 0-255 range
+    """
+    # Use a colormap that provides good contrast
+    base = plt.cm.tab20(np.linspace(0, 1, 20))
+    
+    # If we need more colors, add more colormaps
+    if n_colors > 20:
+        # Add colors from Dark2 colormap
+        base = np.vstack((base, plt.cm.Dark2(np.linspace(0, 1, 8))))
+    if n_colors > 28:
+        # Add colors from Set1 colormap
+        base = np.vstack((base, plt.cm.Set1(np.linspace(0, 1, 9))))
+        
+    # Ensure minimum brightness and contrast
+    min_brightness = 0.3  # Minimum brightness threshold
+    max_brightness = 0.9  # Maximum brightness threshold
+    
+    # Adjust colors
+    for i in range(len(base)):
+        # Calculate perceived brightness (using common weights)
+        brightness = 0.299 * base[i,0] + 0.587 * base[i,1] + 0.114 * base[i,2]
+        
+        # Adjust too dark colors
+        if brightness < min_brightness:
+            scale = min_brightness / (brightness + 1e-6)
+            base[i,:3] = np.minimum(base[i,:3] * scale, 1.0)
+            
+        # Adjust too light colors
+        if brightness > max_brightness:
+            scale = max_brightness / (brightness + 1e-6)
+            base[i,:3] = base[i,:3] * scale
+    
+    # If we still need more colors, create variations of existing ones
+    while len(base) < n_colors:
+        additional = base[:n_colors-len(base)]
+        # Create variations by adjusting hue
+        hsv = matplotlib.colors.rgb_to_hsv(additional[:,:3])
+        hsv[:,0] = (hsv[:,0] + 0.5) % 1.0  # Shift hue by 0.5
+        rgb = matplotlib.colors.hsv_to_rgb(hsv)
+        additional[:,:3] = rgb
+        base = np.vstack((base, additional))
+    
+    # Convert to 0-255 range and return required number of colors
+    colors = (base[:n_colors, :3] * 255).astype(int)
+    return colors
+
+
 @dataclass
 class Component:
     """Class to store connected component information"""
@@ -56,18 +112,23 @@ class Docstrum:
         self.k = k_nearest
         self.angle_threshold = angle_threshold
 
-    def preprocess(self, image: np.ndarray, small_component_threshold = 7) -> np.ndarray:
+    def preprocess(self, image: np.ndarray, small_component_threshold = 7, binarization_threshold = -1) -> np.ndarray:
         """
         Preprocess the image - noise reduction and binarization
         
         Args:
             image: Input grayscale image
+            small_component_threshold: Minimum size of connected components to retain
+            binarization_threshold: Threshold for binarization (-1 for Otsu's thresholding)
             
         Returns:
             Binary image
         """
-        # Apply Otsu's thresholding
-        _, binary = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        if binarization_threshold == -1 :
+            # Apply Otsu's thresholding
+            _, binary = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        else :
+            _, binary = cv2.threshold(image, binarization_threshold, 255, cv2.THRESH_BINARY)
 
         binary = (binary == 0).astype(np.uint8)
 
@@ -168,7 +229,7 @@ class Docstrum:
         return neighbors_info
 
 
-    def estimate_orientation(self, neighbors_info: List[List[Tuple[int, float, float]]]) -> float:
+    def estimate_orientation(self, smoothing_arg, neighbors_info: List[List[Tuple[int, float, float]]]) -> float:
         """
         Estimate document orientation from neighbor angles
         
@@ -187,7 +248,7 @@ class Docstrum:
         hist, bins = np.histogram(angles, bins=180, range=(0, 180))
         
         # Apply smoothing to histogram
-        hist = np.convolve(hist, np.ones(5)/5, mode='same')
+        hist = np.convolve(hist, np.ones(smoothing_arg)/smoothing_arg, mode='same')
         
         # Find peak
         orientation = bins[np.argmax(hist)]
@@ -959,6 +1020,8 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
                                  small_component_threshold: int,
                                  big_component_threshold: int,
                                  just_lines: bool,
+                                 binarization_threshold: int,
+                                 smoothing_arg : int,
                                  log_file: str):
     """
     Process an image and save all visualizations including intermediate steps
@@ -971,7 +1034,7 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     os.makedirs(intermediate_dir, exist_ok=True)
     
     # Process image and save intermediate visualizations
-    binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold)
+    binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold, binarization_threshold = binarization_threshold)
     visualize_preprocessing(image, binary, intermediate_dir, "01_preprocessing")
     
     components = docstrum.find_connected_components(binary, big_component_threshold)
@@ -980,7 +1043,7 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     neighbors_info = docstrum.find_nearest_neighbors(components)
     visualize_neighbors(image, components, neighbors_info, intermediate_dir, "03_neighbors")
     
-    orientation = docstrum.estimate_orientation(neighbors_info)
+    orientation = docstrum.estimate_orientation(smoothing_arg, neighbors_info)
     visualize_orientation_histogram(neighbors_info, orientation, intermediate_dir, "04_orientation")
     
     text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
@@ -1002,8 +1065,8 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     
     # Create final visualization
     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
-    colors = plt.cm.Set3(np.linspace(0, 1, len(merged_blocks)))
-    colors = (colors[:, :3] * 255).astype(int)
+    colors = generate_distinct_colors(len(merged_blocks))
+    #colors = (colors[:, :3] * 255).astype(int)
     
     for block_idx, block in enumerate(merged_blocks):
         block_components = [comp_idx for line in block for comp_idx in line]
@@ -1081,10 +1144,17 @@ def main():
                         help='if not -1, Maximum component size to keep (default: -1)')
     parser.add_argument('--log_file', type=str, default='processing_log.log',
                        help='Path to the log file (default: processing_log.log)')
+    parser.add_argument('--binarization_threshold', type=int, default= -1,
+                          help='Threshold value for binarization (default: -1, Otsu thresholding)') 
+    parser.add_argument('--smoothing_arg', type=int, default=5,
+                          help='Smoothing argument for orientation histogram (default: 5)')
     
-
     
     args = parser.parse_args()
+
+    if args.binarization_threshold < -1:
+        print("Error: Binarization threshold must be -1 or a non-negative integer")
+        sys.exit(1)
     
     # Initialize docstrum
     docstrum = Docstrum(k_nearest=args.k_nearest, angle_threshold=args.angle_threshold)
@@ -1107,6 +1177,8 @@ def main():
                 args.small_component_threshold,
                 args.big_component_threshold,
                 args.just_lines,
+                args.binarization_threshold,
+                args.smoothing_arg,
                 args.log_file
             )
         except Exception as e:
@@ -1144,6 +1216,8 @@ def main():
                         args.small_component_threshold,
                         args.big_component_threshold,
                         args.just_lines,
+                        args.binarization_threshold,
+                        args.smoothing_arg,
                         args.log_file
                     )
                     processed += 1

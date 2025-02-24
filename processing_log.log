@@ -62,3 +62,585 @@
     - Saved visualization to output/lines
     ----------------------------------------
     
+                Processing complete:
+                - Successfully processed: 0 images
+                - Errors: 0 images
+                - Output saved to: ICDAR/output/Latin2
+                ========================================
+                
+    Processed 065:
+    - Found 1860 components
+    - Grouped into 707 text lines
+    - Detected 138 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to ICDAR/output/Latin2
+    ----------------------------------------
+    
+    Processed 065:
+    - Found 1860 components
+    - Grouped into 707 text lines
+    - Detected 173 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to ICDAR/output/Latin2
+    ----------------------------------------
+    
+    Processed 065:
+    - Found 1860 components
+    - Grouped into 707 text lines
+    - Detected 155 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to ICDAR/output/Latin2
+    ----------------------------------------
+    
+    Processed 019:
+    - Found 2394 components
+    - Grouped into 1062 text lines
+    - Detected 30 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to ICDAR/output/Latin2
+    ----------------------------------------
+    
+    Processed 083:
+    - Found 2258 components
+    - Grouped into 734 text lines
+    - Detected 72 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to ICDAR/output/Latin2
+    ----------------------------------------
+    
+                Processing complete:
+                - Successfully processed: 3 images
+                - Errors: 0 images
+                - Output saved to: ICDAR/output/Latin2
+                ========================================
+                
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 33 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/lines
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 33 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/lines
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 324 components
+    - Grouped into 169 text lines
+    - Detected 32 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/lines
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 33 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/lines
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 478 text lines
+    - Detected 31 text blocks
+    - Estimated orientation: 5.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/lines
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 33 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/lines
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 33 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/lines
+    ----------------------------------------
+    
+    Processed 065:
+    - Found 1860 components
+    - Grouped into 707 text lines
+    - Detected 138 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to ICDAR/output/Latin2
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 4 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_1:
+    - Found 606 components
+    - Grouped into 328 text lines
+    - Detected 29 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_3:
+    - Found 3611 components
+    - Grouped into 1725 text lines
+    - Detected 10 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 6 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_2:
+    - Found 478 components
+    - Grouped into 220 text lines
+    - Detected 16 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+                Processing complete:
+                - Successfully processed: 4 images
+                - Errors: 0 images
+                - Output saved to: output/blocks
+                ========================================
+                
+    Processed input_1:
+    - Found 606 components
+    - Grouped into 328 text lines
+    - Detected 40 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_3:
+    - Found 3611 components
+    - Grouped into 1725 text lines
+    - Detected 219 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 117 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_2:
+    - Found 478 components
+    - Grouped into 220 text lines
+    - Detected 50 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+                Processing complete:
+                - Successfully processed: 4 images
+                - Errors: 0 images
+                - Output saved to: output/blocks
+                ========================================
+                
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 357 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 363 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 577 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_1:
+    - Found 606 components
+    - Grouped into 328 text lines
+    - Detected 36 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_3:
+    - Found 3611 components
+    - Grouped into 1725 text lines
+    - Detected 123 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 93 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_2:
+    - Found 478 components
+    - Grouped into 220 text lines
+    - Detected 49 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+                Processing complete:
+                - Successfully processed: 4 images
+                - Errors: 0 images
+                - Output saved to: output/blocks
+                ========================================
+                
+    Processed input_1:
+    - Found 606 components
+    - Grouped into 328 text lines
+    - Detected 36 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_3:
+    - Found 3611 components
+    - Grouped into 1725 text lines
+    - Detected 66 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 72 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_2:
+    - Found 478 components
+    - Grouped into 220 text lines
+    - Detected 46 text blocks
+    - Estimated orientation: 177.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+                Processing complete:
+                - Successfully processed: 4 images
+                - Errors: 0 images
+                - Output saved to: output/blocks
+                ========================================
+                
+    Processed input_1:
+    - Found 123 components
+    - Grouped into 76 text lines
+    - Detected 48 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 216 components
+    - Grouped into 83 text lines
+    - Detected 41 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_2:
+    - Found 169 components
+    - Grouped into 101 text lines
+    - Detected 68 text blocks
+    - Estimated orientation: 3.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+                Processing complete:
+                - Successfully processed: 3 images
+                - Errors: 0 images
+                - Output saved to: output/blocks
+                ========================================
+                
+    Processed input_1:
+    - Found 123 components
+    - Grouped into 76 text lines
+    - Detected 38 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 216 components
+    - Grouped into 83 text lines
+    - Detected 35 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_2:
+    - Found 169 components
+    - Grouped into 101 text lines
+    - Detected 47 text blocks
+    - Estimated orientation: 3.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+                Processing complete:
+                - Successfully processed: 3 images
+                - Errors: 0 images
+                - Output saved to: output/blocks
+                ========================================
+                Error processing input_1.png: name 'blocks' is not defined
+Error processing input_0.png: name 'blocks' is not defined
+Error processing input_2.png: name 'blocks' is not defined
+
+                Processing complete:
+                - Successfully processed: 0 images
+                - Errors: 3 images
+                - Output saved to: output/blocks
+                ========================================
+                Error processing input_1.png: name 'blocks' is not defined
+Error processing input_0.png: name 'blocks' is not defined
+Error processing input_2.png: name 'blocks' is not defined
+
+                Processing complete:
+                - Successfully processed: 0 images
+                - Errors: 3 images
+                - Output saved to: output/blocks
+                ========================================
+                
+    Processed input_1:
+    - Found 123 components
+    - Grouped into 76 text lines
+    - Detected 26 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 216 components
+    - Grouped into 83 text lines
+    - Detected 28 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_2:
+    - Found 169 components
+    - Grouped into 101 text lines
+    - Detected 26 text blocks
+    - Estimated orientation: 3.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+                Processing complete:
+                - Successfully processed: 3 images
+                - Errors: 0 images
+                - Output saved to: output/blocks
+                ========================================
+                
+    Processed input_1:
+    - Found 123 components
+    - Grouped into 76 text lines
+    - Detected 24 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 216 components
+    - Grouped into 83 text lines
+    - Detected 23 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_2:
+    - Found 169 components
+    - Grouped into 101 text lines
+    - Detected 26 text blocks
+    - Estimated orientation: 3.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+                Processing complete:
+                - Successfully processed: 3 images
+                - Errors: 0 images
+                - Output saved to: output/blocks
+                ========================================
+                
+    Processed input_0:
+    - Found 216 components
+    - Grouped into 83 text lines
+    - Detected 12 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 216 components
+    - Grouped into 83 text lines
+    - Detected 12 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 216 components
+    - Grouped into 83 text lines
+    - Detected 4 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 216 components
+    - Grouped into 83 text lines
+    - Detected 4 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 216 components
+    - Grouped into 83 text lines
+    - Detected 3 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 93 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 66 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 72 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 78 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 83 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
+    Processed input_0:
+    - Found 1654 components
+    - Grouped into 857 text lines
+    - Detected 93 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output/blocks
+    ----------------------------------------
+    
