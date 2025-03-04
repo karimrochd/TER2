@@ -664,4 +664,51 @@ Error processing test1: name 'v' is not defined
     - Merge mode: lines and vertical
     - Saved visualization to output2
     ----------------------------------------
+    Error: TEST1.PNG is not a valid file or directory
+
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 4 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output2
+    ----------------------------------------
+    Error processing test1: Unable to determine Axes to steal space for Colorbar. Either provide the *cax* argument to use as the Axes for the Colorbar, provide the *ax* argument to steal space from it, or add *mappable* to an Axes.
+
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 4 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output2
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 4 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output2
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 4 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output2
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1137 components
+    - Grouped into 265 text lines
+    - Detected 4 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output2
+    ----------------------------------------
     

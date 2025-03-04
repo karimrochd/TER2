@@ -678,61 +678,6 @@ def check_block_containment(bounds1, bounds2, tolerance=0.9):
     
     return 0
 
-def visualize_preprocessing(image: np.ndarray, binary: np.ndarray, output_dir: str, filename: str):
-    """
-    Visualize and save the preprocessing step showing original and binary images side by side
-    """
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
-    
-    # Show original image
-    ax1.imshow(image, cmap='gray')
-    ax1.set_title('Original Image')
-    ax1.axis('off')
-    
-    # Show binary image
-    ax2.imshow(binary, cmap='gray')
-    ax2.set_title('Preprocessed Binary Image')
-    ax2.axis('off')
-    
-    plt.tight_layout()
-    
-    # Save the figure
-    output_path = os.path.join(output_dir, f'{filename}_preprocessing.png')
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()
-
-def visualize_components(image: np.ndarray, components: List[Component], output_dir: str, filename: str):
-    """
-    Visualize and save detected connected components with bounding boxes and centroids
-    """
-    # Create RGB visualization image
-    vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
-    
-    # Generate distinct colors
-    colors = plt.cm.rainbow(np.linspace(0, 1, len(components)))
-    colors = (colors[:, :3] * 255).astype(int)
-    
-    # Draw components
-    for idx, comp in enumerate(components):
-        color = colors[idx % len(colors)].tolist()
-        x, y, w, h = comp.bbox
-        
-        # Draw bounding box
-        cv2.rectangle(vis_image, (x, y), (x + w, y + h), color, 1)
-        
-        # Draw centroid
-        cx, cy = map(int, comp.centroid)
-        cv2.circle(vis_image, (cx, cy), 2, color, -1)
-    
-    plt.figure(figsize=(15, 10))
-    plt.imshow(vis_image)
-    plt.title(f'Detected Components (Total: {len(components)})')
-    plt.axis('off')
-    
-    # Save the figure
-    output_path = os.path.join(output_dir, f'{filename}_components.png')
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()
 
 def visualize_neighbors(image: np.ndarray, components: List[Component], 
                     neighbors_info: List[List[Tuple[int, float, float]]], 
@@ -762,15 +707,112 @@ def visualize_neighbors(image: np.ndarray, components: List[Component],
         cx, cy = map(int, comp.centroid)
         cv2.circle(vis_image, (cx, cy), 2, (255, 0, 0), -1)
     
-    plt.figure(figsize=(15, 10))
-    plt.imshow(vis_image)
-    plt.title('K-Nearest Neighbors Connections')
-    plt.axis('off')
+    # Get original image dimensions
+    h, w = image.shape[:2]
     
-    # Save the figure
+    # Create a figure with same aspect ratio
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(w/100, h/100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    
+    # Display the visualization
+    ax.imshow(vis_image)
+    
+    # Save the figure with the same resolution as the input image
     output_path = os.path.join(output_dir, f'{filename}_neighbors.png')
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()
+    plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+    
+    # Save a separate figure with colorbar for reference (not constrained by resolution)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.imshow(vis_image)
+    ax.set_title('K-Nearest Neighbors Connections')
+    ax.axis('off')
+    
+    # Create a separate axes for the colorbar
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+    
+    # Create a color mesh for the colorbar
+    norm = plt.Normalize(0, 180)
+    sm = plt.cm.ScalarMappable(cmap=plt.cm.hsv, norm=norm)
+    sm.set_array([])  # This is a workaround to make the colorbar work
+    
+    # Add colorbar to the axes
+    cbar = fig.colorbar(sm, cax=cbar_ax)
+    cbar.set_label('Angle (degrees)')
+    
+    # Save the figure with colorbar (not constrained by resolution)
+    colorbar_path = os.path.join(output_dir, f'{filename}_neighbors_with_colorbar.png')
+    plt.savefig(colorbar_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+
+def visualize_components(image: np.ndarray, components: List[Component], output_dir: str, filename: str):
+    """
+    Visualize and save detected connected components with bounding boxes and centroids
+    """
+    # Create RGB visualization image
+    vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
+    
+    # Generate distinct colors
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(components)))
+    colors = (colors[:, :3] * 255).astype(int)
+    
+    # Draw components
+    for idx, comp in enumerate(components):
+        color = colors[idx % len(colors)].tolist()
+        x, y, w, h = comp.bbox
+        
+        # Draw bounding box
+        cv2.rectangle(vis_image, (x, y), (x + w, y + h), color, 1)
+        
+        # Draw centroid
+        cx, cy = map(int, comp.centroid)
+        cv2.circle(vis_image, (cx, cy), 2, color, -1)
+    
+    # Get original image dimensions
+    h, w = image.shape[:2]
+    
+    # Create a figure with same aspect ratio
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(w/100, h/100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    
+    # Display the visualization
+    ax.imshow(vis_image)
+    
+    # Save the figure with the same resolution as the input image
+    output_path = os.path.join(output_dir, f'{filename}_components.png')
+    plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
+
+def visualize_preprocessing(image: np.ndarray, binary: np.ndarray, output_dir: str, filename: str):
+    """
+    Visualize and save the preprocessing step binary image with same resolution as input
+    """
+    # Get original image dimensions
+    h, w = image.shape[:2]
+    
+    # Create a figure with same aspect ratio
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(w/100, h/100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    
+    # Display binary image
+    ax.imshow(binary, cmap='gray', aspect='auto')
+    
+    # Save the figure with the same resolution as the input image
+    output_path = os.path.join(output_dir, f'{filename}_preprocessing.png')
+    plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
 
 def visualize_orientation_histogram(neighbors_info: List[List[Tuple[int, float, float]]], 
                                 orientation: float, output_dir: str, filename: str):
@@ -807,6 +849,8 @@ def visualize_orientation_histogram(neighbors_info: List[List[Tuple[int, float, 
     plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.close()
 
+
+
 def visualize_text_lines(image: np.ndarray, components: List[Component], 
                         text_lines: List[List[int]], output_dir: str, filename: str):
     """
@@ -836,15 +880,24 @@ def visualize_text_lines(image: np.ndarray, components: List[Component],
                 x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
                 cv2.line(vis_image, (x1, y1), (x2, y2), color, 1, cv2.LINE_AA)
     
-    plt.figure(figsize=(15, 10))
-    plt.imshow(vis_image)
-    plt.title(f'Detected Text Lines (Total: {len(text_lines)})')
-    plt.axis('off')
+    # Get original image dimensions
+    h, w = image.shape[:2]
     
-    # Save the figure
+    # Create a figure with same aspect ratio
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(w/100, h/100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    
+    # Display the visualization
+    ax.imshow(vis_image)
+    
+    # Save the figure with the same resolution as the input image
     output_path = os.path.join(output_dir, f'{filename}_text_lines.png')
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()
+    plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
 
 def visualize_initial_blocks(image: np.ndarray, components: List[Component], 
                         blocks: List[List[List[int]]], output_dir: str, filename: str):
@@ -883,15 +936,23 @@ def visualize_initial_blocks(image: np.ndarray, components: List[Component],
                     (max_x + padding, max_y + padding), 
                     color, 2)
     
-    plt.figure(figsize=(15, 10))
-    plt.imshow(vis_image)
-    plt.title(f'Initial Text Blocks (Total: {len(blocks)})')
-    plt.axis('off')
+    # Get original image dimensions
+    h, w = image.shape[:2]
     
-    # Save the figure
+    # Create a figure with same aspect ratio
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(w/100, h/100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    
+    # Display the visualization
+    ax.imshow(vis_image)
+    
+    # Save the figure with the same resolution as the input image
     output_path = os.path.join(output_dir, f'{filename}_initial_blocks.png')
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()
+    plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
 
 def calculate_vertical_threshold(text_lines: List[List[int]], components: List[Component]) -> float:
     """
@@ -982,6 +1043,57 @@ def calculate_vertical_threshold(text_lines: List[List[int]], components: List[C
 #     return most_common_distance * 3.0
 
 
+def visualize_docstrum(components: List[Component], 
+                     neighbors_info: List[List[Tuple[int, float, float]]], 
+                     output_dir: str, filename: str):
+    """
+    Visualize and save the docstrum plot (relative positions of neighbors to each centroid)
+    
+    Args:
+        components: List of components
+        neighbors_info: List of lists containing (neighbor_idx, distance, angle) tuples for each component
+        output_dir: Output directory path
+        filename: Base filename for the output
+    """
+    # Extract centroids from components
+    centroids = [comp.centroid for comp in components]
+    
+    # Initialize list to hold plot data
+    plot_points = []
+    
+    # For each component, collect all neighbors translated to origin
+    for i in range(len(components)):
+        centroid = centroids[i]
+        
+        # For each neighbor, translate it and store the data
+        for neighbor_idx, _, _ in neighbors_info[i]:
+            neighbor = centroids[neighbor_idx]
+            translated_neighbor = np.array([neighbor[0] - centroid[0], neighbor[1] - centroid[1]])
+            plot_points.append(translated_neighbor)
+    
+    # Convert plot_points to numpy array for faster plotting
+    plot_points = np.array(plot_points)
+    
+    # Create the plot (this one doesn't need to match the input image resolution)
+    plt.figure(figsize=(10, 10))
+    
+    # Plot the neighbors as blue circles
+    plt.scatter(plot_points[:, 0], plot_points[:, 1], color='blue', marker='o', alpha=0.5, s=5)
+    
+    # Set axes properties
+    plt.axhline(0, color='black', linewidth=1)
+    plt.axvline(0, color='black', linewidth=1)
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.xlabel('Relative X')
+    plt.ylabel('Relative Y')
+    plt.title('Docstrum: Relative Positions of Neighbors to Each Centroid')
+    plt.grid(True)
+    
+    # Save the figure
+    output_path = os.path.join(output_dir, f'{filename}_docstrum.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+
 def log_processing_details(filename: str, components: list, text_lines: list, blocks: list, 
                           orientation: float, just_lines: bool, output_dir: str, log_file: str):
     """
@@ -1052,6 +1164,9 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     initial_blocks = docstrum.find_blocks(components, text_lines)
     visualize_initial_blocks(image, components, initial_blocks, output_dir, filename)
 
+    # Add to process_and_save_visualization function after visualize_neighbors:
+    visualize_docstrum(components, neighbors_info, output_dir, filename)
+
     if vertical_distance_threshold == -1:
         vertical_distance_threshold = calculate_vertical_threshold(text_lines, components)
         print(f"Automatically calculated vertical threshold: {vertical_distance_threshold:.2f}")
@@ -1063,11 +1178,11 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
         just_lines=just_lines
     )
     
+
     # Create final visualization
     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
     colors = generate_distinct_colors(len(merged_blocks))
-    #colors = (colors[:, :3] * 255).astype(int)
-    
+        
     for block_idx, block in enumerate(merged_blocks):
         block_components = [comp_idx for line in block for comp_idx in line]
         if not block_components:
@@ -1081,18 +1196,15 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
         color = colors[block_idx % len(colors)].tolist()
         padding = 3
         cv2.rectangle(vis_image, 
-                     (min_x - padding, min_y - padding), 
-                     (max_x + padding, max_y + padding), 
-                     color, 2)
-    
-    # Save the final visualization in the intermediate steps directory
-    output_path = os.path.join(output_dir, "07_final_blocks.png")
-    cv2.imwrite(output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
-    
-    # Also save a copy of the final visualization in the main output directory
+                    (min_x - padding, min_y - padding), 
+                    (max_x + padding, max_y + padding), 
+                    color, 2)
+
+    # Save the final visualization directly with OpenCV to maintain resolution
     final_output_path = os.path.join(output_dir, f'{filename}_final_blocks.png')
     cv2.imwrite(final_output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
-    
+
+
     # Log processing details
     log_processing_details(filename, components, text_lines, merged_blocks, 
                          orientation, just_lines, output_dir, log_file)
