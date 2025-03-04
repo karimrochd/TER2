@@ -1034,6 +1034,7 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     # os.makedirs(intermediate_dir, exist_ok=True)
     
     # Process image and save intermediate visualizations
+    print(filename)
     binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold, binarization_threshold = binarization_threshold)
     visualize_preprocessing(image, binary, output_dir, filename)
     

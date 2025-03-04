@@ -1034,14 +1034,15 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     # os.makedirs(intermediate_dir, exist_ok=True)
     
     # Process image and save intermediate visualizations
+    print(filename)
     binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold, binarization_threshold = binarization_threshold)
-    visualize_preprocessing(image, binary, output_dir, filename)
+    visualize_preprocessing(image, binary, output_dir, f"{filename}")
     
     components = docstrum.find_connected_components(binary, big_component_threshold)
-    visualize_components(image, components, output_dir,  filename)
+    visualize_components(image, components, output_dir, filename)
     
     neighbors_info = docstrum.find_nearest_neighbors(components)
-    visualize_neighbors(image, components, neighbors_info, output_dir, filename)
+    visualize_neighbors(image, components, neighbors_info, output_dir, v)
     
     orientation = docstrum.estimate_orientation(smoothing_arg, neighbors_info)
     visualize_orientation_histogram(neighbors_info, orientation, output_dir, filename)
