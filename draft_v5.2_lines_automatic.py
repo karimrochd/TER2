@@ -11,6 +11,103 @@ import matplotlib
 matplotlib.use('Agg')
 
 
+def kfill(binary_image, k=5, max_iterations=10):
+    """
+    Implement the kFill filter for noise reduction in binary document images.
+    
+    Args:
+        binary_image (numpy.ndarray): Binary image (1 for foreground, 0 for background).
+        k (int): Window size parameter (must be odd).
+        max_iterations (int): Maximum number of iterations to perform.
+        
+    Returns:
+        numpy.ndarray: Filtered binary image.
+    """
+    
+    # Ensure k is odd
+    if k % 2 == 0:
+        k = k + 1
+    
+    # Create a copy of the image
+    filtered_image = binary_image.copy()
+    
+    iteration = 0
+    changes_made = True
+    
+    # Continue until no changes or max iterations reached
+    while changes_made and iteration < max_iterations:
+        changes_made = False
+        iteration += 1
+        
+        # Perform ON-fill and OFF-fill sub-iterations
+        for fill_value in [1, 0]:  # 1 for ON-fill, 0 for OFF-fill
+            height, width = filtered_image.shape
+            
+            # Create a copy to store changes for this sub-iteration
+            temp_image = filtered_image.copy()
+            
+            # Process each pixel
+            for y in range(k//2, height - k//2):
+                for x in range(k//2, width - k//2):
+                    # Extract window
+                    window = filtered_image[y - k//2 : y + k//2 + 1, x - k//2 : x + k//2 + 1]
+                    
+                    # Define core and neighborhood
+                    core = window[1:-1, 1:-1]
+                    
+                    # Only proceed if all core values are opposite of fill_value
+                    if fill_value == 1 and np.any(core == 1):
+                        continue
+                    if fill_value == 0 and np.any(core == 0):
+                        continue
+                    
+                    # Extract neighborhood (perimeter of window)
+                    neighborhood = np.concatenate([
+                        window[0, :],                # Top row
+                        window[-1, :],               # Bottom row
+                        window[1:-1, 0],             # Left column (without corners)
+                        window[1:-1, -1]             # Right column (without corners)
+                    ])
+                    
+                    # Calculate n (number of ON or OFF pixels in neighborhood)
+                    if fill_value == 1:
+                        n = np.sum(neighborhood == 1)  # Count ON pixels
+                    else:
+                        n = np.sum(neighborhood == 0)  # Count OFF pixels
+                    
+                    # Calculate c (number of connected groups in neighborhood)
+                    # We need to analyze the neighborhood as a circular list
+                    expanded_neighborhood = np.concatenate([neighborhood, neighborhood[0:1]])
+                    c = 0
+                    for i in range(len(neighborhood)):
+                        if expanded_neighborhood[i] != expanded_neighborhood[i+1]:
+                            c += 1
+                    c = c // 2  # Each transition is counted twice (ON->OFF and OFF->ON)
+                    
+                    # Calculate r (number of corner pixels that are ON or OFF)
+                    corners = [window[0, 0], window[0, -1], window[-1, 0], window[-1, -1]]
+                    if fill_value == 1:
+                        r = sum(1 for corner in corners if corner == 1)
+                    else:
+                        r = sum(1 for corner in corners if corner == 0)
+                    
+                    # Apply kFill condition: (c = 1) AND [(n > 3k - 4) OR (n = 3k - 4) AND r = 2]
+                    if (c == 1) and ((n > 3*k - 4) or ((n == 3*k - 4) and (r == 2))):
+                        # Fill the core
+                        temp_image[y - k//2 + 1 : y + k//2, x - k//2 + 1 : x + k//2] = fill_value
+                        changes_made = True
+            
+            # Update filtered_image with the results of this sub-iteration
+            filtered_image = temp_image.copy()
+        
+    print(f"kFill completed after {iteration} iterations.")
+    return filtered_image
+
+
+
+
+
+
 def remove_small_components(binary_image, small_component_threshold = 7):
     """
     Remove connected components smaller than a given size.
@@ -22,6 +119,9 @@ def remove_small_components(binary_image, small_component_threshold = 7):
     Returns:
         numpy.ndarray: Binary image with small components removed.
     """
+
+    binary_image = kfill(binary_image, k=5, max_iterations=10)
+
     # Label connected components
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary_image, connectivity=8)
     
