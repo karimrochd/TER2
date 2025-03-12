@@ -785,3 +785,12 @@ Error processing test1: name 'v' is not defined
     - Saved visualization to output222
     ----------------------------------------
     
+    Processed test1:
+    - Found 1350 components
+    - Grouped into 459 text lines
+    - Detected 5 text blocks
+    - Estimated orientation: 2.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output222
+    ----------------------------------------
+    

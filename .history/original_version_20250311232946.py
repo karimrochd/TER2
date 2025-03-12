@@ -174,7 +174,7 @@ class Docstrum:
         self.k = k_nearest
         self.angle_threshold = angle_threshold
 
-    def preprocess(self, image: np.ndarray, kfill_threshold = 5, max_iterations = 10) -> np.ndarray:
+    def preprocess(self, image: np.ndarray) -> np.ndarray:
         """
         Preprocess the image - noise reduction and binarization as described in the paper.
         
@@ -195,7 +195,7 @@ class Docstrum:
         binary = (binary > 0).astype(np.uint8)
         
         # Apply the Will filter (kFill) for noise reduction as mentioned in the paper
-        binary = kfill(binary, k= kfill_threshold, max_iterations= max_iterations)
+        binary = kfill(binary, k=5, max_iterations=10)
         
         return binary
     
@@ -671,7 +671,7 @@ class Docstrum:
         
         return blocks
 
-    def process(self, image: np.ndarray, kfill_threshold = 5, max_iterations = 10):
+    def process(self, image: np.ndarray):
         """
         Process image with the docstrum algorithm
         
@@ -682,7 +682,7 @@ class Docstrum:
             Tuple containing components, text lines, orientation, blocks, and spacings
         """
         # Preprocess image
-        binary = self.preprocess(image, kfill_threshold = kfill_threshold, max_iterations = max_iterations)
+        binary = self.preprocess(image)
         
         # Find connected components
         components = self.find_connected_components(binary)
@@ -1185,12 +1185,7 @@ def main():
                        help='Window size for angle histogram smoothing (default: 25)')
     parser.add_argument('--visualization', choices=['minimal', 'standard', 'detailed'], default='standard',
                        help='Visualization level (minimal, standard, detailed) (default: standard)')
-    parser.add_argument('--kfill_threshold', type=int, default=5,
-                          help='Threshold for k-fill preprocessing (default: 5)')
-    parser.add_argument('--max_iterations', type=int, default=10,
-                            help='Maximum iterations for k-fill preprocessing (default: 10)')
-
-
+    
     args = parser.parse_args()
     
     # Initialize docstrum
@@ -1205,7 +1200,7 @@ def main():
             return
         
         filename = os.path.splitext(os.path.basename(args.input_path))[0]
-        components, text_lines, orientation, blocks, spacings, binary, initial_orientation, neighbors_info = docstrum.process(image, kfill_threshold = args.kfill_threshold, max_iterations = args.max_iterations)
+        components, text_lines, orientation, blocks, spacings, binary, initial_orientation, neighbors_info = docstrum.process(image)
         
         # Create output directory if it doesn't exist
         os.makedirs(args.output_dir, exist_ok=True)
@@ -1259,7 +1254,7 @@ def main():
                 try:
                     # Process image
                     base_filename = os.path.splitext(filename)[0]
-                    components, text_lines, orientation, blocks, spacings, binary, initial_orientation, neighbors_info = docstrum.process(image, kfill_threshold = args.kfill_threshold, max_iterations = args.max_iterations)
+                    components, text_lines, orientation, blocks, spacings, binary, initial_orientation, neighbors_info = docstrum.process(image)
                     
                     # Choose visualization level
                     if args.visualization == 'detailed':
