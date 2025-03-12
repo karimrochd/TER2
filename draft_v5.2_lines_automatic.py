@@ -108,7 +108,7 @@ def kfill(binary_image, k=5, max_iterations=10):
 
 
 
-def remove_small_components(binary_image, small_component_threshold = 7):
+def remove_small_components(binary_image, small_component_threshold = 7, kfill_threshold = 5, filter_type = 2, kfill_iterations = 10):
     """
     Remove connected components smaller than a given size.
 
@@ -120,7 +120,9 @@ def remove_small_components(binary_image, small_component_threshold = 7):
         numpy.ndarray: Binary image with small components removed.
     """
 
-    binary_image = kfill(binary_image, k=5, max_iterations=10)
+    if filter_type == 0 or filter_type == 2:
+
+        binary_image = kfill(binary_image, k=kfill_threshold, max_iterations= kfill_iterations)
 
     # Label connected components
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary_image, connectivity=8)
@@ -130,8 +132,8 @@ def remove_small_components(binary_image, small_component_threshold = 7):
     
     # Iterate over each component
     for i in range(1, num_labels):  # Skip the background label (0)
-        if stats[i, cv2.CC_STAT_AREA] >= small_component_threshold:
-            # Retain components larger than or equal to k
+        if stats[i, cv2.CC_STAT_AREA] >= small_component_threshold or filter_type == 0:
+            # Retain components larger than or equal to k if filter_type is not 0, else retain everything
             output_image[labels == i] = 1
     
     return output_image
@@ -212,7 +214,7 @@ class Docstrum:
         self.k = k_nearest
         self.angle_threshold = angle_threshold
 
-    def preprocess(self, image: np.ndarray, small_component_threshold = 7, binarization_threshold = -1) -> np.ndarray:
+    def preprocess(self, image: np.ndarray, small_component_threshold = 7, binarization_threshold = -1, kfill_threshold = 5, filter_type = 2, kfill_iterations = 10) -> np.ndarray:
         """
         Preprocess the image - noise reduction and binarization
         
@@ -232,7 +234,7 @@ class Docstrum:
 
         binary = (binary == 0).astype(np.uint8)
 
-        binary = remove_small_components(binary, small_component_threshold= small_component_threshold)
+        binary = remove_small_components(binary, small_component_threshold= small_component_threshold, kfill_threshold = kfill_threshold, filter_type = filter_type, kfill_iterations = kfill_iterations)
         
         return binary
 
@@ -1234,6 +1236,9 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
                                  just_lines: bool,
                                  binarization_threshold: int,
                                  smoothing_arg : int,
+                                 kfill_threshold: int,
+                                 filter_type: int,
+                                 kfill_iterations: int,
                                  log_file: str):
     """
     Process an image and save all visualizations including intermediate steps
@@ -1246,7 +1251,7 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     # os.makedirs(intermediate_dir, exist_ok=True)
     
     # Process image and save intermediate visualizations
-    binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold, binarization_threshold = binarization_threshold)
+    binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold, binarization_threshold = binarization_threshold, kfill_threshold = kfill_threshold, filter_type = filter_type, kfill_iterations = kfill_iterations)
     visualize_preprocessing(image, binary, output_dir, filename)
     
     components = docstrum.find_connected_components(binary, big_component_threshold)
@@ -1359,7 +1364,12 @@ def main():
                           help='Threshold value for binarization (default: -1, Otsu thresholding)') 
     parser.add_argument('--smoothing_arg', type=int, default=5,
                           help='Smoothing argument for orientation histogram (default: 5)')
-    
+    parser.add_argument('--kfill_threshold', type=int, default=5,
+                            help='Threshold value for kfill filter (default: 5)')
+    parser.add_argument('--filter_type', type=int, default=2,
+                            help='Filter type for binarization 0: kfill_filter, 1: remove components smaller than small_component_threshold, 2: both (default: 2)')
+    parser.add_argument('--kfill_iterations', type=int, default=10,
+                            help='Number of iterations for kfill filter (default: 10)')
     
     args = parser.parse_args()
 
@@ -1390,6 +1400,9 @@ def main():
                 args.just_lines,
                 args.binarization_threshold,
                 args.smoothing_arg,
+                args.kfill_threshold,
+                args.filter_type,
+                args.kfill_iterations,
                 args.log_file
             )
         except Exception as e:
@@ -1429,6 +1442,9 @@ def main():
                         args.just_lines,
                         args.binarization_threshold,
                         args.smoothing_arg,
+                        args.kfill_threshold,
+                        args.filter_type,
+                        args.kfill_iterations,
                         args.log_file
                     )
                     processed += 1
