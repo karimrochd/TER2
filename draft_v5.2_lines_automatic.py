@@ -203,7 +203,7 @@ class Component:
     area: int
 
 class Docstrum:
-    def __init__(self, k_nearest: int = 5, angle_threshold: float = 30):
+    def __init__(self, k_nearest: int = 5, angle_threshold: float = 5):
         """
         Initialize docstrum processor
         
@@ -347,8 +347,11 @@ class Docstrum:
             angles.extend([n[2] for n in component_neighbors])
             
         # Create histogram of angles
-        hist, bins = np.histogram(angles, bins=180, range=(0, 180))
+        hist, bins = np.histogram(angles, bins=360, range=(0, 180))
         
+        if smoothing_arg % 2 == 0:
+            smoothing_arg += 1
+
         # Apply smoothing to histogram
         hist = np.convolve(hist, np.ones(smoothing_arg)/smoothing_arg, mode='same')
         
@@ -462,15 +465,17 @@ class Docstrum:
         return text_lines
     
 
+
     def merge_overlapping_blocks(self, components: List[Component], blocks: List[List[List[int]]], 
                                 horizontal_distance_threshold: float = 50,
                                 vertical_distance_threshold: float = 50,
-                                just_lines: bool = True) -> List[List[List[int]]]:
+                                just_lines: bool = True,
+                                block_overlap_threshold = 0.9) -> List[List[List[int]]]:
         """
         Merge blocks based on configuration and containment:
         - Merge blocks that are contained within other blocks
-        - If just_lines is True: only merge blocks in the same line that are horizontally close
-        - If just_lines is False: also merge blocks that are vertically close
+        - First phase: Merge blocks horizontally in the same line
+        - Second phase: If not just_lines, merge blocks vertically with overlap
         
         Args:
             components: List of components
@@ -482,6 +487,7 @@ class Docstrum:
         Returns:
             List of merged blocks
         """
+        # Helper functions remain the same
         def get_block_bounds(block):
             """Get the bounding box of a block"""
             block_components = [comp_idx for line in block for comp_idx in line]
@@ -541,6 +547,7 @@ class Docstrum:
             
             return overlap >= min_width * tolerance
 
+        # PHASE 1: Handle containment and horizontal merging
         while True:
             merged = False
             block_bounds = [get_block_bounds(block) for block in blocks]
@@ -564,21 +571,14 @@ class Docstrum:
                     merge_order = 0  # 0: normal merge, -1: i into j, 1: j into i
                     
                     # First check containment
-                    containment = check_block_containment(bounds1, bounds2)
+                    containment = check_block_containment(bounds1, bounds2, tolerance= block_overlap_threshold)
                     if containment != 0:
                         should_merge = True
                         merge_order = containment
-                    else:
-                        # Check horizontal merging (same line)
-                        if blocks_are_in_same_line(bounds1, bounds2) and \
+                    # Then check horizontal merging (same line)
+                    elif blocks_are_in_same_line(bounds1, bounds2) and \
                         horizontal_distance(bounds1, bounds2) <= horizontal_distance_threshold:
-                            should_merge = True
-                        
-                        # Check vertical merging if not just_lines
-                        elif not just_lines and \
-                            vertical_distance(bounds1, bounds2) <= vertical_distance_threshold and \
-                            horizontal_overlap_exists(bounds1, bounds2):
-                            should_merge = True
+                        should_merge = True
                     
                     if should_merge:
                         if merge_order == -1:  # bounds1 is contained within bounds2
@@ -597,6 +597,43 @@ class Docstrum:
                     
             if not merged:
                 break
+        
+        # PHASE 2: Vertical merging (only if not just_lines)
+        if not just_lines:
+            while True:
+                merged = False
+                block_bounds = [get_block_bounds(block) for block in blocks]
+                
+                # Check each pair of blocks for vertical merging
+                for i in range(len(blocks)):
+                    if i >= len(blocks):  # Check if block was removed
+                        continue
+                        
+                    for j in range(i + 1, len(blocks)):
+                        if j >= len(blocks):  # Check if block was removed
+                            continue
+                            
+                        bounds1 = block_bounds[i]
+                        bounds2 = block_bounds[j]
+                        
+                        if bounds1 is None or bounds2 is None:
+                            continue
+                        
+                        # Check only vertical merging criteria
+                        if vertical_distance(bounds1, bounds2) <= vertical_distance_threshold and \
+                        horizontal_overlap_exists(bounds1, bounds2):
+                            # Merge the blocks
+                            blocks[i].extend(blocks[j])
+                            blocks.pop(j)
+                            block_bounds.pop(j)
+                            merged = True
+                            break
+                    
+                    if merged:
+                        break
+                        
+                if not merged:
+                    break
         
         return blocks
 
@@ -1239,6 +1276,7 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
                                  kfill_threshold: int,
                                  filter_type: int,
                                  kfill_iterations: int,
+                                 block_overlap_threshold: float,
                                  log_file: str):
     """
     Process an image and save all visualizations including intermediate steps
@@ -1280,7 +1318,8 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
         components, initial_blocks, 
         horizontal_distance_threshold=horizontal_distance_threshold,
         vertical_distance_threshold=vertical_distance_threshold,
-        just_lines=just_lines
+        just_lines=just_lines,
+        block_overlap_threshold = block_overlap_threshold
     )
     
 
@@ -1362,14 +1401,16 @@ def main():
                        help='Path to the log file (default: processing_log.log)')
     parser.add_argument('--binarization_threshold', type=int, default= -1,
                           help='Threshold value for binarization (default: -1, Otsu thresholding)') 
-    parser.add_argument('--smoothing_arg', type=int, default=5,
-                          help='Smoothing argument for orientation histogram (default: 5)')
+    parser.add_argument('--smoothing_arg', type=int, default=91,
+                          help='Smoothing argument for orientation histogram (default: 91)')
     parser.add_argument('--kfill_threshold', type=int, default=5,
                             help='Threshold value for kfill filter (default: 5)')
     parser.add_argument('--filter_type', type=int, default=2,
                             help='Filter type for binarization 0: kfill_filter, 1: remove components smaller than small_component_threshold, 2: both (default: 2)')
     parser.add_argument('--kfill_iterations', type=int, default=10,
                             help='Number of iterations for kfill filter (default: 10)')
+    parser.add_argument('--block_overlap_threshold', type=float, default=0.9,
+                            help='Required block overlap ratio for containment (default: 0.9)')
     
     args = parser.parse_args()
 
@@ -1403,6 +1444,7 @@ def main():
                 args.kfill_threshold,
                 args.filter_type,
                 args.kfill_iterations,
+                args.block_overlap_threshold,
                 args.log_file
             )
         except Exception as e:
@@ -1445,6 +1487,7 @@ def main():
                         args.kfill_threshold,
                         args.filter_type,
                         args.kfill_iterations,
+                        args.block_overlap_threshold,
                         args.log_file
                     )
                     processed += 1
