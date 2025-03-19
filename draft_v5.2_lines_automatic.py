@@ -106,23 +106,25 @@ def kfill(binary_image, k=5, max_iterations=10):
 
 
 
-
-
-def remove_small_components(binary_image, small_component_threshold = 7, kfill_threshold = 5, filter_type = 2, kfill_iterations = 10):
+def remove_small_components(binary_image, small_component_threshold = 0.05, kfill_threshold = 5, filter_type = 2, kfill_iterations = 10):
     """
-    Remove connected components smaller than a given size.
+    Remove connected components smaller than a threshold based on the median component size.
 
     Args:
         binary_image (numpy.ndarray): Binary image (1 for foreground, 0 for background).
-        small_component_threshold (int): Minimum size of connected components to retain.
+        small_component_threshold (float): Threshold multiplier for median component area.
+                                          Components smaller than median_area * small_component_threshold
+                                          will be removed.
+        kfill_threshold (int): Threshold for kFill filter.
+        filter_type (int): Type of filtering to apply (0: kFill only, 1: size threshold only, 2: both).
+        kfill_iterations (int): Maximum iterations for kFill.
 
     Returns:
         numpy.ndarray: Binary image with small components removed.
     """
 
     if filter_type == 0 or filter_type == 2:
-
-        binary_image = kfill(binary_image, k=kfill_threshold, max_iterations= kfill_iterations)
+        binary_image = kfill(binary_image, k=kfill_threshold, max_iterations=kfill_iterations)
 
     # Label connected components
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary_image, connectivity=8)
@@ -130,15 +132,25 @@ def remove_small_components(binary_image, small_component_threshold = 7, kfill_t
     # Create an output image initialized to 0
     output_image = np.zeros_like(binary_image, dtype=np.uint8)
     
+    # Calculate median component area (skip background)
+    if num_labels > 1:
+        component_areas = [stats[i, cv2.CC_STAT_AREA] for i in range(1, num_labels)]
+        median_area = np.median(component_areas)
+        min_area_threshold = median_area * small_component_threshold
+        print(f"Median component area: {median_area}, Threshold area: {min_area_threshold}")
+    else:
+        # If there's only the background component, use a default threshold
+        min_area_threshold = small_component_threshold
+        print("No components found, using default threshold")
+    
     # Iterate over each component
     for i in range(1, num_labels):  # Skip the background label (0)
-        if stats[i, cv2.CC_STAT_AREA] >= small_component_threshold or filter_type == 0:
-            # Retain components larger than or equal to k if filter_type is not 0, else retain everything
+        component_area = stats[i, cv2.CC_STAT_AREA]
+        if filter_type == 0 or component_area >= min_area_threshold:
+            # Retain components larger than median-based threshold, or all if filter_type is 0
             output_image[labels == i] = 1
     
     return output_image
-
-
 
 def generate_distinct_colors(n_colors: int) -> np.ndarray:
     """
@@ -214,7 +226,7 @@ class Docstrum:
         self.k = k_nearest
         self.angle_threshold = angle_threshold
 
-    def preprocess(self, image: np.ndarray, small_component_threshold = 7, binarization_threshold = -1, kfill_threshold = 5, filter_type = 2, kfill_iterations = 10) -> np.ndarray:
+    def preprocess(self, image: np.ndarray, small_component_threshold = 0.05, binarization_threshold = -1, kfill_threshold = 5, filter_type = 2, kfill_iterations = 10) -> np.ndarray:
         """
         Preprocess the image - noise reduction and binarization
         
@@ -1268,7 +1280,7 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
                                  docstrum: Docstrum, spacing_factor: float, 
                                  horizontal_distance_threshold: float,
                                  vertical_distance_threshold: float,
-                                 small_component_threshold: int,
+                                 small_component_threshold: float,
                                  big_component_threshold: int,
                                  just_lines: bool,
                                  binarization_threshold: int,
@@ -1393,8 +1405,8 @@ def main():
                        help='Maximum vertical distance between blocks to merge them (default: -1), -1 to use the calculate the threshold automaticaly, not needed for lines')
     parser.add_argument('--just_lines', action='store_true', default=False,
                        help='If True, only merge blocks in the same line (default: False)')
-    parser.add_argument('--small_component_threshold', type=int, default=7,
-                          help='Minimum component size to remove as noise (default: 7)')
+    parser.add_argument('--small_component_threshold', type=float, default=0.05,
+                          help='Keep components larger than median component area * small_component_threshold (default: 0.05)')
     parser.add_argument('--big_component_threshold', type=int, default= -1,
                         help='if not -1, keep components smaller than median component area * big_component_threshold  (default: -1)')
     parser.add_argument('--log_file', type=str, default='processing_log.log',

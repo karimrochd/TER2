@@ -1038,11 +1038,24 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     
     # Process image (same as before)
     binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold, binarization_threshold=binarization_threshold)
+    visualize_preprocessing(image, binary, output_dir, filename)
+    
     components = docstrum.find_connected_components(binary, big_component_threshold)
+    visualize_components(image, components, output_dir,  filename)
+    
     neighbors_info = docstrum.find_nearest_neighbors(components)
+    visualize_neighbors(image, components, neighbors_info, output_dir, filename)
+    
     orientation = docstrum.estimate_orientation(smoothing_arg, neighbors_info)
+    visualize_orientation_histogram(neighbors_info, orientation, output_dir, filename)
+    
     text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
+    visualize_text_lines(image, components, text_lines, output_dir, filename)
+    
     initial_blocks = docstrum.find_blocks(components, text_lines)
+    visualize_initial_blocks(image, components, initial_blocks, output_dir, filename)
+
+
 
     if vertical_distance_threshold == -1:
         vertical_distance_threshold = calculate_vertical_threshold(text_lines, components)

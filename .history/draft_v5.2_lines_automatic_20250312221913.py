@@ -11,7 +11,104 @@ import matplotlib
 matplotlib.use('Agg')
 
 
-def remove_small_components(binary_image, small_component_threshold = 7):
+def kfill(binary_image, k=5, max_iterations=10):
+    """
+    Implement the kFill filter for noise reduction in binary document images.
+    
+    Args:
+        binary_image (numpy.ndarray): Binary image (1 for foreground, 0 for background).
+        k (int): Window size parameter (must be odd).
+        max_iterations (int): Maximum number of iterations to perform.
+        
+    Returns:
+        numpy.ndarray: Filtered binary image.
+    """
+    
+    # Ensure k is odd
+    if k % 2 == 0:
+        k = k + 1
+    
+    # Create a copy of the image
+    filtered_image = binary_image.copy()
+    
+    iteration = 0
+    changes_made = True
+    
+    # Continue until no changes or max iterations reached
+    while changes_made and iteration < max_iterations:
+        changes_made = False
+        iteration += 1
+        
+        # Perform ON-fill and OFF-fill sub-iterations
+        for fill_value in [1, 0]:  # 1 for ON-fill, 0 for OFF-fill
+            height, width = filtered_image.shape
+            
+            # Create a copy to store changes for this sub-iteration
+            temp_image = filtered_image.copy()
+            
+            # Process each pixel
+            for y in range(k//2, height - k//2):
+                for x in range(k//2, width - k//2):
+                    # Extract window
+                    window = filtered_image[y - k//2 : y + k//2 + 1, x - k//2 : x + k//2 + 1]
+                    
+                    # Define core and neighborhood
+                    core = window[1:-1, 1:-1]
+                    
+                    # Only proceed if all core values are opposite of fill_value
+                    if fill_value == 1 and np.any(core == 1):
+                        continue
+                    if fill_value == 0 and np.any(core == 0):
+                        continue
+                    
+                    # Extract neighborhood (perimeter of window)
+                    neighborhood = np.concatenate([
+                        window[0, :],                # Top row
+                        window[-1, :],               # Bottom row
+                        window[1:-1, 0],             # Left column (without corners)
+                        window[1:-1, -1]             # Right column (without corners)
+                    ])
+                    
+                    # Calculate n (number of ON or OFF pixels in neighborhood)
+                    if fill_value == 1:
+                        n = np.sum(neighborhood == 1)  # Count ON pixels
+                    else:
+                        n = np.sum(neighborhood == 0)  # Count OFF pixels
+                    
+                    # Calculate c (number of connected groups in neighborhood)
+                    # We need to analyze the neighborhood as a circular list
+                    expanded_neighborhood = np.concatenate([neighborhood, neighborhood[0:1]])
+                    c = 0
+                    for i in range(len(neighborhood)):
+                        if expanded_neighborhood[i] != expanded_neighborhood[i+1]:
+                            c += 1
+                    c = c // 2  # Each transition is counted twice (ON->OFF and OFF->ON)
+                    
+                    # Calculate r (number of corner pixels that are ON or OFF)
+                    corners = [window[0, 0], window[0, -1], window[-1, 0], window[-1, -1]]
+                    if fill_value == 1:
+                        r = sum(1 for corner in corners if corner == 1)
+                    else:
+                        r = sum(1 for corner in corners if corner == 0)
+                    
+                    # Apply kFill condition: (c = 1) AND [(n > 3k - 4) OR (n = 3k - 4) AND r = 2]
+                    if (c == 1) and ((n > 3*k - 4) or ((n == 3*k - 4) and (r == 2))):
+                        # Fill the core
+                        temp_image[y - k//2 + 1 : y + k//2, x - k//2 + 1 : x + k//2] = fill_value
+                        changes_made = True
+            
+            # Update filtered_image with the results of this sub-iteration
+            filtered_image = temp_image.copy()
+        
+    print(f"kFill completed after {iteration} iterations.")
+    return filtered_image
+
+
+
+
+
+
+def remove_small_components(binary_image, small_component_threshold = 7, kfill_threshold = 5, filter_type = 2, kfill_iterations = 10):
     """
     Remove connected components smaller than a given size.
 
@@ -22,6 +119,11 @@ def remove_small_components(binary_image, small_component_threshold = 7):
     Returns:
         numpy.ndarray: Binary image with small components removed.
     """
+
+    if filter_type == 0 or filter_type == 2:
+
+        binary_image = kfill(binary_image, k=kfill_threshold, max_iterations= kfill_iterations)
+
     # Label connected components
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary_image, connectivity=8)
     
@@ -30,11 +132,67 @@ def remove_small_components(binary_image, small_component_threshold = 7):
     
     # Iterate over each component
     for i in range(1, num_labels):  # Skip the background label (0)
-        if stats[i, cv2.CC_STAT_AREA] >= small_component_threshold:
-            # Retain components larger than or equal to k
+        if stats[i, cv2.CC_STAT_AREA] >= small_component_threshold or filter_type == 0:
+            # Retain components larger than or equal to k if filter_type is not 0, else retain everything
             output_image[labels == i] = 1
     
     return output_image
+
+
+
+def generate_distinct_colors(n_colors: int) -> np.ndarray:
+    """
+    Generate distinct, easily visible colors for block visualization
+    
+    Args:
+        n_colors: Number of colors needed
+        
+    Returns:
+        numpy.ndarray: Array of RGB colors scaled to 0-255 range
+    """
+    # Use a colormap that provides good contrast
+    base = plt.cm.tab20(np.linspace(0, 1, 20))
+    
+    # If we need more colors, add more colormaps
+    if n_colors > 20:
+        # Add colors from Dark2 colormap
+        base = np.vstack((base, plt.cm.Dark2(np.linspace(0, 1, 8))))
+    if n_colors > 28:
+        # Add colors from Set1 colormap
+        base = np.vstack((base, plt.cm.Set1(np.linspace(0, 1, 9))))
+        
+    # Ensure minimum brightness and contrast
+    min_brightness = 0.3  # Minimum brightness threshold
+    max_brightness = 0.9  # Maximum brightness threshold
+    
+    # Adjust colors
+    for i in range(len(base)):
+        # Calculate perceived brightness (using common weights)
+        brightness = 0.299 * base[i,0] + 0.587 * base[i,1] + 0.114 * base[i,2]
+        
+        # Adjust too dark colors
+        if brightness < min_brightness:
+            scale = min_brightness / (brightness + 1e-6)
+            base[i,:3] = np.minimum(base[i,:3] * scale, 1.0)
+            
+        # Adjust too light colors
+        if brightness > max_brightness:
+            scale = max_brightness / (brightness + 1e-6)
+            base[i,:3] = base[i,:3] * scale
+    
+    # If we still need more colors, create variations of existing ones
+    while len(base) < n_colors:
+        additional = base[:n_colors-len(base)]
+        # Create variations by adjusting hue
+        hsv = matplotlib.colors.rgb_to_hsv(additional[:,:3])
+        hsv[:,0] = (hsv[:,0] + 0.5) % 1.0  # Shift hue by 0.5
+        rgb = matplotlib.colors.hsv_to_rgb(hsv)
+        additional[:,:3] = rgb
+        base = np.vstack((base, additional))
+    
+    # Convert to 0-255 range and return required number of colors
+    colors = (base[:n_colors, :3] * 255).astype(int)
+    return colors
 
 
 @dataclass
@@ -45,7 +203,7 @@ class Component:
     area: int
 
 class Docstrum:
-    def __init__(self, k_nearest: int = 5, angle_threshold: float = 30):
+    def __init__(self, k_nearest: int = 5, angle_threshold: float = 5):
         """
         Initialize docstrum processor
         
@@ -56,26 +214,31 @@ class Docstrum:
         self.k = k_nearest
         self.angle_threshold = angle_threshold
 
-    def preprocess(self, image: np.ndarray, small_component_threshold = 7) -> np.ndarray:
+    def preprocess(self, image: np.ndarray, small_component_threshold = 7, binarization_threshold = -1, kfill_threshold = 5, filter_type = 2, kfill_iterations = 10) -> np.ndarray:
         """
         Preprocess the image - noise reduction and binarization
         
         Args:
             image: Input grayscale image
+            small_component_threshold: Minimum size of connected components to retain
+            binarization_threshold: Threshold for binarization (-1 for Otsu's thresholding)
             
         Returns:
             Binary image
         """
-        # Apply Otsu's thresholding
-        _, binary = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        if binarization_threshold == -1 :
+            # Apply Otsu's thresholding
+            _, binary = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        else :
+            _, binary = cv2.threshold(image, binarization_threshold, 255, cv2.THRESH_BINARY)
 
         binary = (binary == 0).astype(np.uint8)
 
-        binary = remove_small_components(binary, small_component_threshold= small_component_threshold)
+        binary = remove_small_components(binary, small_component_threshold= small_component_threshold, kfill_threshold = kfill_threshold, filter_type = filter_type, kfill_iterations = kfill_iterations)
         
         return binary
 
-    def find_connected_components(self, binary: np.ndarray, big_component_threshold = 1000) -> List[Component]:
+    def find_connected_components(self, binary: np.ndarray, big_component_threshold = 10) -> List[Component]:
         """
         Find connected components in binary image and filter them based on size
         
@@ -104,8 +267,8 @@ class Docstrum:
         for i in range(1, num_labels):
             area = stats[i, cv2.CC_STAT_AREA]
             
-            # Filter out components that are too small or too large
-            if not big_component_threshold == -1 and area > big_component_threshold:
+            # Filter out components that are too large
+            if not big_component_threshold == -1 and area > median_area * big_component_threshold:
                 continue
                 
             x = stats[i, cv2.CC_STAT_LEFT]
@@ -168,7 +331,7 @@ class Docstrum:
         return neighbors_info
 
 
-    def estimate_orientation(self, neighbors_info: List[List[Tuple[int, float, float]]]) -> float:
+    def estimate_orientation(self, smoothing_arg, neighbors_info: List[List[Tuple[int, float, float]]]) -> float:
         """
         Estimate document orientation from neighbor angles
         
@@ -184,10 +347,13 @@ class Docstrum:
             angles.extend([n[2] for n in component_neighbors])
             
         # Create histogram of angles
-        hist, bins = np.histogram(angles, bins=180, range=(0, 180))
+        hist, bins = np.histogram(angles, bins=360, range=(0, 180))
         
+        if smoothing_arg % 2 == 0:
+            smoothing_arg += 1
+
         # Apply smoothing to histogram
-        hist = np.convolve(hist, np.ones(5)/5, mode='same')
+        hist = np.convolve(hist, np.ones(smoothing_arg)/smoothing_arg, mode='same')
         
         # Find peak
         orientation = bins[np.argmax(hist)]
@@ -299,6 +465,7 @@ class Docstrum:
         return text_lines
     
 
+
     def merge_overlapping_blocks(self, components: List[Component], blocks: List[List[List[int]]], 
                                 horizontal_distance_threshold: float = 50,
                                 vertical_distance_threshold: float = 50,
@@ -306,8 +473,8 @@ class Docstrum:
         """
         Merge blocks based on configuration and containment:
         - Merge blocks that are contained within other blocks
-        - If just_lines is True: only merge blocks in the same line that are horizontally close
-        - If just_lines is False: also merge blocks that are vertically close
+        - First phase: Merge blocks horizontally in the same line
+        - Second phase: If not just_lines, merge blocks vertically with overlap
         
         Args:
             components: List of components
@@ -319,6 +486,7 @@ class Docstrum:
         Returns:
             List of merged blocks
         """
+        # Helper functions remain the same
         def get_block_bounds(block):
             """Get the bounding box of a block"""
             block_components = [comp_idx for line in block for comp_idx in line]
@@ -378,6 +546,7 @@ class Docstrum:
             
             return overlap >= min_width * tolerance
 
+        # PHASE 1: Handle containment and horizontal merging
         while True:
             merged = False
             block_bounds = [get_block_bounds(block) for block in blocks]
@@ -405,17 +574,10 @@ class Docstrum:
                     if containment != 0:
                         should_merge = True
                         merge_order = containment
-                    else:
-                        # Check horizontal merging (same line)
-                        if blocks_are_in_same_line(bounds1, bounds2) and \
+                    # Then check horizontal merging (same line)
+                    elif blocks_are_in_same_line(bounds1, bounds2) and \
                         horizontal_distance(bounds1, bounds2) <= horizontal_distance_threshold:
-                            should_merge = True
-                        
-                        # Check vertical merging if not just_lines
-                        elif not just_lines and \
-                            vertical_distance(bounds1, bounds2) <= vertical_distance_threshold and \
-                            horizontal_overlap_exists(bounds1, bounds2):
-                            should_merge = True
+                        should_merge = True
                     
                     if should_merge:
                         if merge_order == -1:  # bounds1 is contained within bounds2
@@ -434,6 +596,43 @@ class Docstrum:
                     
             if not merged:
                 break
+        
+        # PHASE 2: Vertical merging (only if not just_lines)
+        if not just_lines:
+            while True:
+                merged = False
+                block_bounds = [get_block_bounds(block) for block in blocks]
+                
+                # Check each pair of blocks for vertical merging
+                for i in range(len(blocks)):
+                    if i >= len(blocks):  # Check if block was removed
+                        continue
+                        
+                    for j in range(i + 1, len(blocks)):
+                        if j >= len(blocks):  # Check if block was removed
+                            continue
+                            
+                        bounds1 = block_bounds[i]
+                        bounds2 = block_bounds[j]
+                        
+                        if bounds1 is None or bounds2 is None:
+                            continue
+                        
+                        # Check only vertical merging criteria
+                        if vertical_distance(bounds1, bounds2) <= vertical_distance_threshold and \
+                        horizontal_overlap_exists(bounds1, bounds2):
+                            # Merge the blocks
+                            blocks[i].extend(blocks[j])
+                            blocks.pop(j)
+                            block_bounds.pop(j)
+                            merged = True
+                            break
+                    
+                    if merged:
+                        break
+                        
+                if not merged:
+                    break
         
         return blocks
 
@@ -618,58 +817,11 @@ def check_block_containment(bounds1, bounds2, tolerance=0.9):
     return 0
 
 
-def visualize_preprocessing(image: np.ndarray, binary: np.ndarray):
-    """
-    Visualize the preprocessing step showing original and binary images side by side
-    """
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
-    
-    # Show original image
-    ax1.imshow(image, cmap='gray')
-    ax1.set_title('Original Image')
-    ax1.axis('off')
-    
-    # Show binary image
-    ax2.imshow(binary, cmap='gray')
-    ax2.set_title('Preprocessed Binary Image')
-    ax2.axis('off')
-    
-    plt.tight_layout()
-    plt.show()
-
-def visualize_components(image: np.ndarray, components: List[Component]):
-    """
-    Visualize detected connected components with bounding boxes and centroids
-    """
-    # Create RGB visualization image
-    vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
-    
-    # Generate distinct colors
-    colors = plt.cm.rainbow(np.linspace(0, 1, len(components)))
-    colors = (colors[:, :3] * 255).astype(int)
-    
-    # Draw components
-    for idx, comp in enumerate(components):
-        color = colors[idx % len(colors)].tolist()
-        x, y, w, h = comp.bbox
-        
-        # Draw bounding box
-        cv2.rectangle(vis_image, (x, y), (x + w, y + h), color, 1)
-        
-        # Draw centroid
-        cx, cy = map(int, comp.centroid)
-        cv2.circle(vis_image, (cx, cy), 2, color, -1)
-    
-    plt.figure(figsize=(15, 10))
-    plt.imshow(vis_image)
-    plt.title(f'Detected Components (Total: {len(components)})')
-    plt.axis('off')
-    plt.show()
-
 def visualize_neighbors(image: np.ndarray, components: List[Component], 
-                    neighbors_info: List[List[Tuple[int, float, float]]]):
+                    neighbors_info: List[List[Tuple[int, float, float]]], 
+                    output_dir: str, filename: str):
     """
-    Visualize k-nearest neighbors connections between components
+    Visualize and save k-nearest neighbors connections between components
     """
     # Create RGB visualization image
     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
@@ -693,16 +845,117 @@ def visualize_neighbors(image: np.ndarray, components: List[Component],
         cx, cy = map(int, comp.centroid)
         cv2.circle(vis_image, (cx, cy), 2, (255, 0, 0), -1)
     
-    plt.figure(figsize=(15, 10))
-    plt.imshow(vis_image)
-    plt.title('K-Nearest Neighbors Connections')
-    plt.axis('off')
-    plt.show()
+    # Get original image dimensions
+    h, w = image.shape[:2]
+    
+    # Create a figure with same aspect ratio
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(w/100, h/100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    
+    # Display the visualization
+    ax.imshow(vis_image)
+    
+    # Save the figure with the same resolution as the input image
+    output_path = os.path.join(output_dir, f'{filename}_neighbors.png')
+    plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+    
+    # Save a separate figure with colorbar for reference (not constrained by resolution)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.imshow(vis_image)
+    ax.set_title('K-Nearest Neighbors Connections')
+    ax.axis('off')
+    
+    # Create a separate axes for the colorbar
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+    
+    # Create a color mesh for the colorbar
+    norm = plt.Normalize(0, 180)
+    sm = plt.cm.ScalarMappable(cmap=plt.cm.hsv, norm=norm)
+    sm.set_array([])  # This is a workaround to make the colorbar work
+    
+    # Add colorbar to the axes
+    cbar = fig.colorbar(sm, cax=cbar_ax)
+    cbar.set_label('Angle (degrees)')
+    
+    # Save the figure with colorbar (not constrained by resolution)
+    colorbar_path = os.path.join(output_dir, f'{filename}_neighbors_with_colorbar.png')
+    plt.savefig(colorbar_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+
+def visualize_components(image: np.ndarray, components: List[Component], output_dir: str, filename: str):
+    """
+    Visualize and save detected connected components with bounding boxes and centroids
+    """
+    # Create RGB visualization image
+    vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
+    
+    # Generate distinct colors
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(components)))
+    colors = (colors[:, :3] * 255).astype(int)
+    
+    # Draw components
+    for idx, comp in enumerate(components):
+        color = colors[idx % len(colors)].tolist()
+        x, y, w, h = comp.bbox
+        
+        # Draw bounding box
+        cv2.rectangle(vis_image, (x, y), (x + w, y + h), color, 1)
+        
+        # Draw centroid
+        cx, cy = map(int, comp.centroid)
+        cv2.circle(vis_image, (cx, cy), 2, color, -1)
+    
+    # Get original image dimensions
+    h, w = image.shape[:2]
+    
+    # Create a figure with same aspect ratio
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(w/100, h/100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    
+    # Display the visualization
+    ax.imshow(vis_image)
+    
+    # Save the figure with the same resolution as the input image
+    output_path = os.path.join(output_dir, f'{filename}_components.png')
+    plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
+
+def visualize_preprocessing(image: np.ndarray, binary: np.ndarray, output_dir: str, filename: str):
+    """
+    Visualize and save the preprocessing step binary image with same resolution as input
+    """
+    # Get original image dimensions
+    h, w = image.shape[:2]
+    
+    # Create a figure with same aspect ratio
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(w/100, h/100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    
+    # Display binary image
+    ax.imshow(binary, cmap='gray', aspect='auto')
+    
+    # Save the figure with the same resolution as the input image
+    output_path = os.path.join(output_dir, f'{filename}_preprocessing.png')
+    plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
 
 def visualize_orientation_histogram(neighbors_info: List[List[Tuple[int, float, float]]], 
-                                orientation: float):
+                                orientation: float, output_dir: str, filename: str):
     """
-    Visualize histogram of angles and detected orientation
+    Visualize and save histogram of angles and detected orientation
     """
     # Collect all angles
     angles = []
@@ -728,12 +981,18 @@ def visualize_orientation_histogram(neighbors_info: List[List[Tuple[int, float, 
     plt.ylabel('Frequency')
     plt.legend()
     plt.grid(True, alpha=0.3)
-    plt.show()
+    
+    # Save the figure
+    output_path = os.path.join(output_dir, f'{filename}_orientation_histogram.png')
+    plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.close()
+
+
 
 def visualize_text_lines(image: np.ndarray, components: List[Component], 
-                        text_lines: List[List[int]]):
+                        text_lines: List[List[int]], output_dir: str, filename: str):
     """
-    Visualize detected text lines with different colors
+    Visualize and save detected text lines with different colors
     """
     # Create RGB visualization image
     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
@@ -759,16 +1018,29 @@ def visualize_text_lines(image: np.ndarray, components: List[Component],
                 x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
                 cv2.line(vis_image, (x1, y1), (x2, y2), color, 1, cv2.LINE_AA)
     
-    plt.figure(figsize=(15, 10))
-    plt.imshow(vis_image)
-    plt.title(f'Detected Text Lines (Total: {len(text_lines)})')
-    plt.axis('off')
-    plt.show()
+    # Get original image dimensions
+    h, w = image.shape[:2]
+    
+    # Create a figure with same aspect ratio
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(w/100, h/100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    
+    # Display the visualization
+    ax.imshow(vis_image)
+    
+    # Save the figure with the same resolution as the input image
+    output_path = os.path.join(output_dir, f'{filename}_text_lines.png')
+    plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
 
 def visualize_initial_blocks(image: np.ndarray, components: List[Component], 
-                        blocks: List[List[List[int]]]):
+                        blocks: List[List[List[int]]], output_dir: str, filename: str):
     """
-    Visualize initial text blocks before merging
+    Visualize and save initial text blocks before merging
     """
     # Create RGB visualization image
     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
@@ -802,11 +1074,23 @@ def visualize_initial_blocks(image: np.ndarray, components: List[Component],
                     (max_x + padding, max_y + padding), 
                     color, 2)
     
-    plt.figure(figsize=(15, 10))
-    plt.imshow(vis_image)
-    plt.title(f'Initial Text Blocks (Total: {len(blocks)})')
-    plt.axis('off')
-    plt.show()
+    # Get original image dimensions
+    h, w = image.shape[:2]
+    
+    # Create a figure with same aspect ratio
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(w/100, h/100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    
+    # Display the visualization
+    ax.imshow(vis_image)
+    
+    # Save the figure with the same resolution as the input image
+    output_path = os.path.join(output_dir, f'{filename}_initial_blocks.png')
+    plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
 
 def calculate_vertical_threshold(text_lines: List[List[int]], components: List[Component]) -> float:
     """
@@ -897,6 +1181,57 @@ def calculate_vertical_threshold(text_lines: List[List[int]], components: List[C
 #     return most_common_distance * 3.0
 
 
+def visualize_docstrum(components: List[Component], 
+                     neighbors_info: List[List[Tuple[int, float, float]]], 
+                     output_dir: str, filename: str):
+    """
+    Visualize and save the docstrum plot (relative positions of neighbors to each centroid)
+    
+    Args:
+        components: List of components
+        neighbors_info: List of lists containing (neighbor_idx, distance, angle) tuples for each component
+        output_dir: Output directory path
+        filename: Base filename for the output
+    """
+    # Extract centroids from components
+    centroids = [comp.centroid for comp in components]
+    
+    # Initialize list to hold plot data
+    plot_points = []
+    
+    # For each component, collect all neighbors translated to origin
+    for i in range(len(components)):
+        centroid = centroids[i]
+        
+        # For each neighbor, translate it and store the data
+        for neighbor_idx, _, _ in neighbors_info[i]:
+            neighbor = centroids[neighbor_idx]
+            translated_neighbor = np.array([neighbor[0] - centroid[0], neighbor[1] - centroid[1]])
+            plot_points.append(translated_neighbor)
+    
+    # Convert plot_points to numpy array for faster plotting
+    plot_points = np.array(plot_points)
+    
+    # Create the plot (this one doesn't need to match the input image resolution)
+    plt.figure(figsize=(10, 10))
+    
+    # Plot the neighbors as blue circles
+    plt.scatter(plot_points[:, 0], plot_points[:, 1], color='blue', marker='o', alpha=0.5, s=5)
+    
+    # Set axes properties
+    plt.axhline(0, color='black', linewidth=1)
+    plt.axvline(0, color='black', linewidth=1)
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.xlabel('Relative X')
+    plt.ylabel('Relative Y')
+    plt.title('Docstrum: Relative Positions of Neighbors to Each Centroid')
+    plt.grid(True)
+    
+    # Save the figure
+    output_path = os.path.join(output_dir, f'{filename}_docstrum.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+
 def log_processing_details(filename: str, components: list, text_lines: list, blocks: list, 
                           orientation: float, just_lines: bool, output_dir: str, log_file: str):
     """
@@ -927,6 +1262,7 @@ def log_processing_details(filename: str, components: list, text_lines: list, bl
         f.write(log_entry)
 
 
+
 def process_and_save_visualization(image: np.ndarray, output_dir: str, filename: str, 
                                  docstrum: Docstrum, spacing_factor: float, 
                                  horizontal_distance_threshold: float,
@@ -934,41 +1270,47 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
                                  small_component_threshold: int,
                                  big_component_threshold: int,
                                  just_lines: bool,
+                                 binarization_threshold: int,
+                                 smoothing_arg : int,
+                                 kfill_threshold: int,
+                                 filter_type: int,
+                                 kfill_iterations: int,
                                  log_file: str):
     """
-    Process an image and save final visualization
-    
-    Args:
-        image: Input grayscale image
-        output_dir: Directory to save visualization
-        filename: Base filename for saving visualization
-        docstrum: Initialized Docstrum object
-        spacing_factor: Factor to multiply local intercharacter space for max allowed gap
-        corner_threshold: Maximum distance between corners to consider them as sharing a border
-        horizontal_distance_threshold: Maximum horizontal distance between blocks to merge them
-        vertical_distance_threshold: Maximum vertical distance between blocks to merge them
-        just_lines: If True, only merge blocks in the same line
+    Process an image and save all visualizations including intermediate steps
     """
-    # Create output directory if it doesn't exist
+    # Create main output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
-    # Process image with spacing_factor
-    binary = docstrum.preprocess(image, small_component_threshold = small_component_threshold)
+    # # Create intermediate steps directory for this specific image
+    # intermediate_dir = os.path.join(output_dir, f"{filename}_intermediate_steps")
+    # os.makedirs(intermediate_dir, exist_ok=True)
+    
+    # Process image and save intermediate visualizations
+    binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold, binarization_threshold = binarization_threshold, kfill_threshold = kfill_threshold, filter_type = filter_type, kfill_iterations = kfill_iterations)
+    visualize_preprocessing(image, binary, output_dir, filename)
+    
     components = docstrum.find_connected_components(binary, big_component_threshold)
+    visualize_components(image, components, output_dir,  filename)
+    
     neighbors_info = docstrum.find_nearest_neighbors(components)
-    orientation = docstrum.estimate_orientation(neighbors_info)
+    visualize_neighbors(image, components, neighbors_info, output_dir, filename)
+    
+    orientation = docstrum.estimate_orientation(smoothing_arg, neighbors_info)
+    visualize_orientation_histogram(neighbors_info, orientation, output_dir, filename)
+    
     text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
+    visualize_text_lines(image, components, text_lines, output_dir, filename)
+    
     initial_blocks = docstrum.find_blocks(components, text_lines)
+    visualize_initial_blocks(image, components, initial_blocks, output_dir, filename)
 
+    # Add to process_and_save_visualization function after visualize_neighbors:
+    visualize_docstrum(components, neighbors_info, output_dir, filename)
 
     if vertical_distance_threshold == -1:
         vertical_distance_threshold = calculate_vertical_threshold(text_lines, components)
         print(f"Automatically calculated vertical threshold: {vertical_distance_threshold:.2f}")
-    
-    # if horizontal_distance_threshold == -1:
-    #     horizontal_distance_threshold = calculate_horizontal_threshold(text_lines, components)
-    #     print(f"Automatically calculated horizontal threshold: {horizontal_distance_threshold:.2f}")
-    
 
     merged_blocks = docstrum.merge_overlapping_blocks(
         components, initial_blocks, 
@@ -977,11 +1319,11 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
         just_lines=just_lines
     )
     
+
     # Create final visualization
     vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
-    colors = plt.cm.Set3(np.linspace(0, 1, len(merged_blocks)))
-    colors = (colors[:, :3] * 255).astype(int)
-    
+    colors = generate_distinct_colors(len(merged_blocks))
+        
     for block_idx, block in enumerate(merged_blocks):
         block_components = [comp_idx for line in block for comp_idx in line]
         if not block_components:
@@ -995,28 +1337,38 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
         color = colors[block_idx % len(colors)].tolist()
         padding = 3
         cv2.rectangle(vis_image, 
-                     (min_x - padding, min_y - padding), 
-                     (max_x + padding, max_y + padding), 
-                     color, 2)
-    
-    # Save the visualization
-    output_path = os.path.join(output_dir, f'{filename}_blocks.png')
-    cv2.imwrite(output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
-    
+                    (min_x - padding, min_y - padding), 
+                    (max_x + padding, max_y + padding), 
+                    color, 2)
+
+    # Save the final visualization directly with OpenCV to maintain resolution
+    final_output_path = os.path.join(output_dir, f'{filename}_final_blocks.png')
+    cv2.imwrite(final_output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
+
+
     # Log processing details
     log_processing_details(filename, components, text_lines, merged_blocks, 
                          orientation, just_lines, output_dir, log_file)
     
     # Print to console as well
-    print(f"Processed {filename}:")
+    print(f"\nProcessed {filename}:")
     print(f"- Found {len(components)} components")
     print(f"- Grouped into {len(text_lines)} text lines")
     print(f"- Detected {len(merged_blocks)} text blocks")
     print(f"- Estimated orientation: {orientation:.1f} degrees")
     print(f"- Merge mode: {'line-only' if just_lines else 'lines and vertical'}")
-    print(f"- Saved visualization to {output_dir}")
+    print(f"\nSaved visualizations:")
+    print(f"- Final result: {output_dir}/{filename}_final_blocks.png")
+    print("  1. Preprocessing")
+    print("  2. Connected components")
+    print("  3. K-nearest neighbors")
+    print("  4. Orientation histogram")
+    print("  5. Text lines")
+    print("  6. Initial blocks")
+    print("  7. Final blocks")
     
     return components, text_lines, orientation, merged_blocks
+
 
 
 def main():
@@ -1041,13 +1393,25 @@ def main():
     parser.add_argument('--small_component_threshold', type=int, default=7,
                           help='Minimum component size to remove as noise (default: 7)')
     parser.add_argument('--big_component_threshold', type=int, default= -1,
-                        help='if not -1, Maximum component size to keep (default: -1)')
+                        help='if not -1, keep components smaller than median component area * big_component_threshold  (default: -1)')
     parser.add_argument('--log_file', type=str, default='processing_log.log',
                        help='Path to the log file (default: processing_log.log)')
-    
-
+    parser.add_argument('--binarization_threshold', type=int, default= -1,
+                          help='Threshold value for binarization (default: -1, Otsu thresholding)') 
+    parser.add_argument('--smoothing_arg', type=int, default=91,
+                          help='Smoothing argument for orientation histogram (default: 91)')
+    parser.add_argument('--kfill_threshold', type=int, default=5,
+                            help='Threshold value for kfill filter (default: 5)')
+    parser.add_argument('--filter_type', type=int, default=2,
+                            help='Filter type for binarization 0: kfill_filter, 1: remove components smaller than small_component_threshold, 2: both (default: 2)')
+    parser.add_argument('--kfill_iterations', type=int, default=10,
+                            help='Number of iterations for kfill filter (default: 10)')
     
     args = parser.parse_args()
+
+    if args.binarization_threshold < -1:
+        print("Error: Binarization threshold must be -1 or a non-negative integer")
+        sys.exit(1)
     
     # Initialize docstrum
     docstrum = Docstrum(k_nearest=args.k_nearest, angle_threshold=args.angle_threshold)
@@ -1070,6 +1434,11 @@ def main():
                 args.small_component_threshold,
                 args.big_component_threshold,
                 args.just_lines,
+                args.binarization_threshold,
+                args.smoothing_arg,
+                args.kfill_threshold,
+                args.filter_type,
+                args.kfill_iterations,
                 args.log_file
             )
         except Exception as e:
@@ -1107,6 +1476,11 @@ def main():
                         args.small_component_threshold,
                         args.big_component_threshold,
                         args.just_lines,
+                        args.binarization_threshold,
+                        args.smoothing_arg,
+                        args.kfill_threshold,
+                        args.filter_type,
+                        args.kfill_iterations,
                         args.log_file
                     )
                     processed += 1
