@@ -108,7 +108,7 @@ def kfill(binary_image, k=5, max_iterations=10):
 
 def remove_small_components(binary_image, small_component_threshold = 0.05, kfill_threshold = 5, filter_type = 2, kfill_iterations = 10):
     """
-    Remove connected components smaller than a threshold based on the median component size.
+    Remove connected components smaller than a threshold based on the most common component size.
 
     Args:
         binary_image (numpy.ndarray): Binary image (1 for foreground, 0 for background).
@@ -134,10 +134,12 @@ def remove_small_components(binary_image, small_component_threshold = 0.05, kfil
     
     # Calculate median component area (skip background)
     if num_labels > 1:
-        component_areas = [stats[i, cv2.CC_STAT_AREA] for i in range(1, num_labels)]
-        median_area = np.median(component_areas)
-        min_area_threshold = median_area * small_component_threshold
-        print(f"Median component area: {median_area}, Threshold area: {min_area_threshold}")
+        bbox_areas = [stats[i, cv2.CC_STAT_WIDTH] * stats[i, cv2.CC_STAT_HEIGHT] for i in range(1, num_labels)]        
+        hist, bin_edges = np.histogram(bbox_areas, bins='auto')
+        peak_bin_index = np.argmax(hist)
+        peak_area = (bin_edges[peak_bin_index] + bin_edges[peak_bin_index + 1]) / 2  # Use middle of the peak bin
+        min_area_threshold = peak_area * small_component_threshold
+        print(f"Threshold area: {min_area_threshold}")
     else:
         # If there's only the background component, use a default threshold
         min_area_threshold = small_component_threshold
@@ -145,7 +147,7 @@ def remove_small_components(binary_image, small_component_threshold = 0.05, kfil
     
     # Iterate over each component
     for i in range(1, num_labels):  # Skip the background label (0)
-        component_area = stats[i, cv2.CC_STAT_AREA]
+        component_area = stats[i, cv2.CC_STAT_WIDTH] * stats[i, cv2.CC_STAT_HEIGHT]
         if filter_type == 0 or component_area >= min_area_threshold:
             # Retain components larger than median-based threshold, or all if filter_type is 0
             output_image[labels == i] = 1
@@ -270,17 +272,21 @@ class Docstrum:
         if num_labels < 2:  # 1 is background
             raise ValueError("No components found in the image")
         
-        # Calculate median area to use for filtering
-        areas = stats[1:, cv2.CC_STAT_AREA]  # Skip background
-        median_area = np.median(areas)
+        # Calculate most common area to use for filtering
+        bbox_areas = [stats[i, cv2.CC_STAT_WIDTH] * stats[i, cv2.CC_STAT_HEIGHT] for i in range(1, num_labels)]        
+        hist, bin_edges = np.histogram(bbox_areas, bins='auto')
+        peak_bin_index = np.argmax(hist)
+        peak_area = (bin_edges[peak_bin_index] + bin_edges[peak_bin_index + 1]) / 2  # Use middle of the peak bin
+
         
         components = []
         # Skip background component (index 0)
         for i in range(1, num_labels):
-            area = stats[i, cv2.CC_STAT_AREA]
+            area = stats[i, cv2.CC_STAT_WIDTH] * stats[i, cv2.CC_STAT_HEIGHT]
+            
             
             # Filter out components that are too large
-            if not big_component_threshold == -1 and area > median_area * big_component_threshold:
+            if not big_component_threshold == -1 and area > peak_area * big_component_threshold:
                 continue
                 
             x = stats[i, cv2.CC_STAT_LEFT]
@@ -1406,9 +1412,9 @@ def main():
     parser.add_argument('--just_lines', action='store_true', default=False,
                        help='If True, only merge blocks in the same line (default: False)')
     parser.add_argument('--small_component_threshold', type=float, default=0.05,
-                          help='Keep components larger than median component area * small_component_threshold (default: 0.05)')
+                          help='Keep components larger than most common component area * small_component_threshold (default: 0.05)')
     parser.add_argument('--big_component_threshold', type=int, default= -1,
-                        help='if not -1, keep components smaller than median component area * big_component_threshold  (default: -1)')
+                        help='if not -1, keep components smaller than most common component area * big_component_threshold  (default: -1)')
     parser.add_argument('--log_file', type=str, default='processing_log.log',
                        help='Path to the log file (default: processing_log.log)')
     parser.add_argument('--binarization_threshold', type=int, default= -1,
