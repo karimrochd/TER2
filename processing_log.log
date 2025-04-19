@@ -929,3 +929,553 @@ Error processing test1: name 'v' is not defined
     - Saved visualization to output
     ----------------------------------------
     
+    Processed 00000357:
+    - Found 3123 components
+    - Grouped into 2873 text lines
+    - Detected 1 text blocks
+    - Estimated orientation: 22.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1285 components
+    - Grouped into 1217 text lines
+    - Detected 5 text blocks
+    - Estimated orientation: 22.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to test1
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3123 components
+    - Grouped into 2873 text lines
+    - Detected 1 text blocks
+    - Estimated orientation: 22.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output2
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3123 components
+    - Grouped into 2873 text lines
+    - Detected 1 text blocks
+    - Estimated orientation: 22.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output4
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3114 components
+    - Grouped into 2867 text lines
+    - Detected 146 text blocks
+    - Estimated orientation: 22.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output3
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1285 components
+    - Grouped into 370 text lines
+    - Detected 5 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output2
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1285 components
+    - Grouped into 370 text lines
+    - Detected 5 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output2
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3065 components
+    - Grouped into 1031 text lines
+    - Detected 331 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output
+    ----------------------------------------
+    
+    Processed 00000790:
+    - Found 2436 components
+    - Grouped into 764 text lines
+    - Detected 5 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3065 components
+    - Grouped into 1031 text lines
+    - Detected 459 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_lines
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3065 components
+    - Grouped into 1031 text lines
+    - Detected 419 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_lines
+    ----------------------------------------
+    
+    Processed 00000790:
+    - Found 2436 components
+    - Grouped into 764 text lines
+    - Detected 134 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_lines
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3065 components
+    - Grouped into 1031 text lines
+    - Detected 298 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output
+    ----------------------------------------
+    
+    Processed 00000790:
+    - Found 2436 components
+    - Grouped into 764 text lines
+    - Detected 5 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output
+    ----------------------------------------
+    
+    Processed 00000269:
+    - Found 1037 components
+    - Grouped into 572 text lines
+    - Detected 534 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_lines
+    ----------------------------------------
+    
+    Processed 00000269:
+    - Found 1037 components
+    - Grouped into 572 text lines
+    - Detected 461 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output
+    ----------------------------------------
+    
+    Processed 00000421:
+    - Found 1185 components
+    - Grouped into 1040 text lines
+    - Detected 893 text blocks
+    - Estimated orientation: 11.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_lines
+    ----------------------------------------
+    
+    Processed 00000421:
+    - Found 1185 components
+    - Grouped into 1040 text lines
+    - Detected 736 text blocks
+    - Estimated orientation: 11.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1652 components
+    - Grouped into 671 text lines
+    - Detected 1 text blocks
+    - Estimated orientation: 37.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1450 components
+    - Grouped into 835 text lines
+    - Detected 6 text blocks
+    - Estimated orientation: 30.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1699 components
+    - Grouped into 865 text lines
+    - Detected 15 text blocks
+    - Estimated orientation: 30.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1450 components
+    - Grouped into 835 text lines
+    - Detected 6 text blocks
+    - Estimated orientation: 30.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1652 components
+    - Grouped into 671 text lines
+    - Detected 1 text blocks
+    - Estimated orientation: 37.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1874 components
+    - Grouped into 984 text lines
+    - Detected 40 text blocks
+    - Estimated orientation: 37.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1854 components
+    - Grouped into 935 text lines
+    - Detected 31 text blocks
+    - Estimated orientation: 33.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1877 components
+    - Grouped into 996 text lines
+    - Detected 9 text blocks
+    - Estimated orientation: 31.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1877 components
+    - Grouped into 996 text lines
+    - Detected 9 text blocks
+    - Estimated orientation: 31.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1:
+    - Found 1285 components
+    - Grouped into 370 text lines
+    - Detected 5 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1877 components
+    - Grouped into 910 text lines
+    - Detected 7 text blocks
+    - Estimated orientation: 30.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1868 components
+    - Grouped into 860 text lines
+    - Detected 87 text blocks
+    - Estimated orientation: 37.5 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1885 components
+    - Grouped into 918 text lines
+    - Detected 88 text blocks
+    - Estimated orientation: 37.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rotated:
+    - Found 1885 components
+    - Grouped into 918 text lines
+    - Detected 9 text blocks
+    - Estimated orientation: 37.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3117 components
+    - Grouped into 1063 text lines
+    - Detected 320 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_357
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3117 components
+    - Grouped into 1063 text lines
+    - Detected 1 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_3572
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3117 components
+    - Grouped into 1063 text lines
+    - Detected 81 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_3572
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3117 components
+    - Grouped into 1063 text lines
+    - Detected 172 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_357
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3117 components
+    - Grouped into 1063 text lines
+    - Detected 162 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_3572
+    ----------------------------------------
+    
+    Processed 00000357:
+    - Found 3117 components
+    - Grouped into 1063 text lines
+    - Detected 154 text blocks
+    - Estimated orientation: 0.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_3573
+    ----------------------------------------
+    
+    Processed test1_rotated_Input:
+    - Found 1889 components
+    - Grouped into 922 text lines
+    - Detected 160 text blocks
+    - Estimated orientation: 37.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rotated_Input:
+    - Found 1874 components
+    - Grouped into 984 text lines
+    - Detected 172 text blocks
+    - Estimated orientation: 37.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1791 components
+    - Grouped into 949 text lines
+    - Detected 1 text blocks
+    - Estimated orientation: 137.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    Error processing test1_rot: [Errno 2] No such file or directory: 'output_r2/test1_rot_preprocessing.png'
+
+    Processed test1_rot:
+    - Found 1791 components
+    - Grouped into 949 text lines
+    - Detected 1 text blocks
+    - Estimated orientation: 137.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1790 components
+    - Grouped into 881 text lines
+    - Detected 1 text blocks
+    - Estimated orientation: 140.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1786 components
+    - Grouped into 891 text lines
+    - Detected 232 text blocks
+    - Estimated orientation: 137.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1784 components
+    - Grouped into 879 text lines
+    - Detected 100 text blocks
+    - Estimated orientation: 140.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1785 components
+    - Grouped into 892 text lines
+    - Detected 62 text blocks
+    - Estimated orientation: 141.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1785 components
+    - Grouped into 892 text lines
+    - Detected 81 text blocks
+    - Estimated orientation: 141.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1785 components
+    - Grouped into 892 text lines
+    - Detected 58 text blocks
+    - Estimated orientation: 141.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1785 components
+    - Grouped into 892 text lines
+    - Detected 62 text blocks
+    - Estimated orientation: 141.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1785 components
+    - Grouped into 892 text lines
+    - Detected 58 text blocks
+    - Estimated orientation: 141.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1785 components
+    - Grouped into 892 text lines
+    - Detected 58 text blocks
+    - Estimated orientation: 141.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1785 components
+    - Grouped into 892 text lines
+    - Detected 58 text blocks
+    - Estimated orientation: 141.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r2
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1785 components
+    - Grouped into 892 text lines
+    - Detected 62 text blocks
+    - Estimated orientation: 141.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1785 components
+    - Grouped into 892 text lines
+    - Detected 81 text blocks
+    - Estimated orientation: 141.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1791 components
+    - Grouped into 869 text lines
+    - Detected 98 text blocks
+    - Estimated orientation: 36.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1806 components
+    - Grouped into 893 text lines
+    - Detected 110 text blocks
+    - Estimated orientation: 35.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1806 components
+    - Grouped into 893 text lines
+    - Detected 4 text blocks
+    - Estimated orientation: 35.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1806 components
+    - Grouped into 893 text lines
+    - Detected 6 text blocks
+    - Estimated orientation: 35.5 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1817 components
+    - Grouped into 889 text lines
+    - Detected 31 text blocks
+    - Estimated orientation: 38.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1817 components
+    - Grouped into 889 text lines
+    - Detected 56 text blocks
+    - Estimated orientation: 38.0 degrees
+    - Merge mode: line-only
+    - Saved visualization to output_r
+    ----------------------------------------
+    
+    Processed test1_rot:
+    - Found 1817 components
+    - Grouped into 889 text lines
+    - Detected 5 text blocks
+    - Estimated orientation: 38.0 degrees
+    - Merge mode: lines and vertical
+    - Saved visualization to output_r
+    ----------------------------------------
+    

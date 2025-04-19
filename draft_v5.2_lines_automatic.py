@@ -3,6 +3,7 @@ import cv2
 import sys
 import numpy as np
 from scipy.spatial import KDTree
+from scipy.ndimage import convolve1d
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict
 from dataclasses import dataclass
@@ -104,7 +105,46 @@ def kfill(binary_image, k=5, max_iterations=10):
     return filtered_image
 
 
-
+def rotate_image(image, angle_degrees, background_value=255):
+    """
+    Rotate an image by the specified angle in degrees.
+    
+    Args:
+        image: Image to rotate
+        angle_degrees: Angle in degrees (positive values rotate counterclockwise)
+        background_value: Value to fill in the background after rotation
+        
+    Returns:
+        Rotated image
+    """
+    # Check if the image is grayscale or RGB
+    if len(image.shape) > 2 and image.shape[2] == 3:  # Color image
+        background_value = (background_value, background_value, background_value)
+    
+    # Calculate image center
+    (h, w) = image.shape[:2]
+    center = (w // 2, h // 2)
+    
+    # Get the rotation matrix
+    M = cv2.getRotationMatrix2D(center, angle_degrees, 1.0)
+    
+    # Calculate the new size to ensure no part of the image is cut off
+    cos = np.abs(M[0, 0])
+    sin = np.abs(M[0, 1])
+    new_w = int((h * sin) + (w * cos))
+    new_h = int((h * cos) + (w * sin))
+    
+    # Adjust the rotation matrix to take into account the new size
+    M[0, 2] += (new_w / 2) - center[0]
+    M[1, 2] += (new_h / 2) - center[1]
+    
+    # Perform the rotation
+    rotated = cv2.warpAffine(image, M, (new_w, new_h), 
+                            flags=cv2.INTER_LINEAR,
+                            borderMode=cv2.BORDER_CONSTANT, 
+                            borderValue=background_value)
+    
+    return rotated
 
 def remove_small_components(binary_image, small_component_threshold = 0.05, kfill_threshold = 5, filter_type = 2, kfill_iterations = 10):
     """
@@ -371,10 +411,11 @@ class Docstrum:
             smoothing_arg += 1
 
         # Apply smoothing to histogram
-        hist = np.convolve(hist, np.ones(smoothing_arg)/smoothing_arg, mode='same')
+        kernel = np.ones(smoothing_arg)/smoothing_arg
+        smoothed = convolve1d(hist, kernel, mode='wrap')
         
         # Find peak
-        orientation = bins[np.argmax(hist)]
+        orientation = bins[np.argmax(smoothed)]
         
         return orientation
 
@@ -519,7 +560,7 @@ class Docstrum:
             
             return (min_x, min_y, max_x, max_y)
 
-        def blocks_are_in_same_line(bounds1, bounds2, vertical_tolerance=0.5):
+        def blocks_are_in_same_line(bounds1, bounds2, vertical_tolerance=1.0):
             """Check if two blocks are roughly in the same line"""
             _, y1, _, y2 = bounds1
             _, y3, _, y4 = bounds2
@@ -972,7 +1013,7 @@ def visualize_preprocessing(image: np.ndarray, binary: np.ndarray, output_dir: s
 
 
 def visualize_orientation_histogram(neighbors_info: List[List[Tuple[int, float, float]]], 
-                                orientation: float, output_dir: str, filename: str):
+                                orientation: float, output_dir: str, filename: str, smoothing_arg: int ):
     """
     Visualize and save histogram of angles and detected orientation
     """
@@ -983,16 +1024,17 @@ def visualize_orientation_histogram(neighbors_info: List[List[Tuple[int, float, 
         
     # Create histogram
     plt.figure(figsize=(12, 6))
-    hist, bins, _ = plt.hist(angles, bins=180, range=(0, 180), 
+    hist, bins, _ = plt.hist(angles, bins=360, range=(0, 180), 
                             color='skyblue', alpha=0.7)
     
     # Apply smoothing for visualization
-    smoothed = np.convolve(hist, np.ones(5)/5, mode='same')
+    kernel = np.ones(smoothing_arg)/smoothing_arg
+    smoothed = convolve1d(hist, kernel, mode='wrap')
     bin_centers = (bins[:-1] + bins[1:]) / 2
     plt.plot(bin_centers, smoothed, 'r-', linewidth=2, label='Smoothed')
     
     # Mark detected orientation
-    plt.axvline(x=orientation, color='green', linestyle='--', 
+    plt.axvline(x=orientation+0.5, color='green', linestyle='--', 
                 label=f'Detected Orientation: {orientation:.1f}°')
     
     plt.title('Histogram of Neighbor Angles')
@@ -1281,7 +1323,6 @@ def log_processing_details(filename: str, components: list, text_lines: list, bl
         f.write(log_entry)
 
 
-
 def process_and_save_visualization(image: np.ndarray, output_dir: str, filename: str, 
                                  docstrum: Docstrum, spacing_factor: float, 
                                  horizontal_distance_threshold: float,
@@ -1290,7 +1331,7 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
                                  big_component_threshold: int,
                                  just_lines: bool,
                                  binarization_threshold: int,
-                                 smoothing_arg : int,
+                                 smoothing_arg: int,
                                  kfill_threshold: int,
                                  filter_type: int,
                                  kfill_iterations: int,
@@ -1302,94 +1343,175 @@ def process_and_save_visualization(image: np.ndarray, output_dir: str, filename:
     # Create main output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
-    # # Create intermediate steps directory for this specific image
-    # intermediate_dir = os.path.join(output_dir, f"{filename}_intermediate_steps")
-    # os.makedirs(intermediate_dir, exist_ok=True)
-    
-    # Process image and save intermediate visualizations
-    binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold, binarization_threshold = binarization_threshold, kfill_threshold = kfill_threshold, filter_type = filter_type, kfill_iterations = kfill_iterations)
+    # Process image and save preprocessing visualization
+    binary = docstrum.preprocess(image, small_component_threshold=small_component_threshold, 
+                              binarization_threshold=binarization_threshold, 
+                              kfill_threshold=kfill_threshold, 
+                              filter_type=filter_type, 
+                              kfill_iterations=kfill_iterations)
     visualize_preprocessing(image, binary, output_dir, filename)
     
+    # Find components on original binary
     components = docstrum.find_connected_components(binary, big_component_threshold)
-    visualize_components(image, components, output_dir,  filename)
+    visualize_components(image, components, output_dir, filename)
     
+    # Find nearest neighbors and estimate orientation
     neighbors_info = docstrum.find_nearest_neighbors(components)
     visualize_neighbors(image, components, neighbors_info, output_dir, filename)
     
+    # Estimate orientation
     orientation = docstrum.estimate_orientation(smoothing_arg, neighbors_info)
-    visualize_orientation_histogram(neighbors_info, orientation, output_dir, filename)
-    
-    text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
-    visualize_text_lines(image, components, text_lines, output_dir, filename)
-    
-    initial_blocks = docstrum.find_blocks(components, text_lines)
-    visualize_initial_blocks(image, components, initial_blocks, output_dir, filename)
-
-    # Add to process_and_save_visualization function after visualize_neighbors:
+    visualize_orientation_histogram(neighbors_info, orientation, output_dir, filename, smoothing_arg)
     visualize_docstrum(components, neighbors_info, output_dir, filename)
-
-    if vertical_distance_threshold == -1:
-        vertical_distance_threshold = calculate_vertical_threshold(text_lines, components)
-        print(f"Automatically calculated vertical threshold: {vertical_distance_threshold:.2f}")
-
-    merged_blocks = docstrum.merge_overlapping_blocks(
-        components, initial_blocks, 
-        horizontal_distance_threshold=horizontal_distance_threshold,
-        vertical_distance_threshold=vertical_distance_threshold,
-        just_lines=just_lines,
-        block_overlap_threshold = block_overlap_threshold
-    )
     
-
-    # Create final visualization
-    vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
-    colors = generate_distinct_colors(len(merged_blocks))
-        
-    for block_idx, block in enumerate(merged_blocks):
-        block_components = [comp_idx for line in block for comp_idx in line]
-        if not block_components:
-            continue
-        
-        min_x = min(components[idx].bbox[0] for idx in block_components)
-        min_y = min(components[idx].bbox[1] for idx in block_components)
-        max_x = max(components[idx].bbox[0] + components[idx].bbox[2] for idx in block_components)
-        max_y = max(components[idx].bbox[1] + components[idx].bbox[3] for idx in block_components)
-        
-        color = colors[block_idx % len(colors)].tolist()
-        padding = 3
-        cv2.rectangle(vis_image, 
-                    (min_x - padding, min_y - padding), 
-                    (max_x + padding, max_y + padding), 
-                    color, 2)
-
-    # Save the final visualization directly with OpenCV to maintain resolution
-    final_output_path = os.path.join(output_dir, f'{filename}_final_blocks.png')
-    cv2.imwrite(final_output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
-
-
-    # Log processing details
-    log_processing_details(filename, components, text_lines, merged_blocks, 
-                         orientation, just_lines, output_dir, log_file)
+    print(f"Estimated orientation: {orientation:.2f} degrees")
     
-    # Print to console as well
-    print(f"\nProcessed {filename}:")
-    print(f"- Found {len(components)} components")
-    print(f"- Grouped into {len(text_lines)} text lines")
-    print(f"- Detected {len(merged_blocks)} text blocks")
-    print(f"- Estimated orientation: {orientation:.1f} degrees")
-    print(f"- Merge mode: {'line-only' if just_lines else 'lines and vertical'}")
-    print(f"\nSaved visualizations:")
-    print(f"- Final result: {output_dir}/{filename}_final_blocks.png")
-    print("  1. Preprocessing")
-    print("  2. Connected components")
-    print("  3. K-nearest neighbors")
-    print("  4. Orientation histogram")
-    print("  5. Text lines")
-    print("  6. Initial blocks")
-    print("  7. Final blocks")
+    # Rotate image and binary by -orientation (deskew)
+    if abs(orientation) > 0.5:  # Only rotate if orientation is significant
+        rotated_image = rotate_image(image, orientation, 255)  # White background
+        rotated_binary = rotate_image(binary, orientation, 0)  # Black background
+        
+        # Save rotated preprocessing images
+        visualize_preprocessing(rotated_image, rotated_binary, output_dir, f"{filename}_rotated")
+        
+        # Find components on rotated binary
+        rotated_components = docstrum.find_connected_components(rotated_binary, big_component_threshold)
+        visualize_components(rotated_image, rotated_components, output_dir, f"{filename}_rotated")
+        
+        # Process with rotated data
+        rotated_neighbors_info = docstrum.find_nearest_neighbors(rotated_components)
+        
+        # After rotation, orientation should be close to 0
+        rotated_orientation = docstrum.estimate_orientation(smoothing_arg, rotated_neighbors_info)
+        print(f"Orientation after rotation: {rotated_orientation:.2f} degrees")
+        
+        # Find text lines and blocks on rotated data
+        rotated_text_lines = docstrum.find_text_lines(rotated_components, rotated_neighbors_info, 
+                                                  rotated_orientation, spacing_factor=spacing_factor)
+        visualize_text_lines(rotated_image, rotated_components, rotated_text_lines, output_dir, f"{filename}_rotated")
+        
+        if vertical_distance_threshold == -1:
+            vertical_distance_threshold = calculate_vertical_threshold(rotated_text_lines, rotated_components)
+            print(f"Automatically calculated vertical threshold: {vertical_distance_threshold:.2f}")
+        
+        rotated_initial_blocks = docstrum.find_blocks(rotated_components, rotated_text_lines)
+        visualize_initial_blocks(rotated_image, rotated_components, rotated_initial_blocks, output_dir, f"{filename}_rotated")
+        
+        rotated_merged_blocks = docstrum.merge_overlapping_blocks(
+            rotated_components, rotated_initial_blocks,
+            horizontal_distance_threshold=horizontal_distance_threshold,
+            vertical_distance_threshold=vertical_distance_threshold,
+            just_lines=just_lines,
+            block_overlap_threshold=block_overlap_threshold
+        )
+        
+        # Create final visualization for rotated image
+        rotated_vis_image = cv2.cvtColor(rotated_image.copy(), cv2.COLOR_GRAY2RGB)
+        colors = generate_distinct_colors(len(rotated_merged_blocks))
+        
+        for block_idx, block in enumerate(rotated_merged_blocks):
+            block_components = [comp_idx for line in block for comp_idx in line]
+            if not block_components:
+                continue
+            
+            min_x = min(rotated_components[idx].bbox[0] for idx in block_components)
+            min_y = min(rotated_components[idx].bbox[1] for idx in block_components)
+            max_x = max(rotated_components[idx].bbox[0] + rotated_components[idx].bbox[2] for idx in block_components)
+            max_y = max(rotated_components[idx].bbox[1] + rotated_components[idx].bbox[3] for idx in block_components)
+            
+            color = colors[block_idx % len(colors)].tolist()
+            padding = 3
+            cv2.rectangle(rotated_vis_image, 
+                        (min_x - padding, min_y - padding), 
+                        (max_x + padding, max_y + padding), 
+                        color, 2)
+        
+        # Save the rotated final visualization
+        rotated_output_path = os.path.join(output_dir, f'{filename}_rotated_final_blocks.png')
+        cv2.imwrite(rotated_output_path, cv2.cvtColor(rotated_vis_image, cv2.COLOR_RGB2BGR))
+        
+        # Now rotate the visualization back to original orientation
+        final_vis_image = rotate_image(rotated_vis_image, -1 * orientation)
+        final_output_path = os.path.join(output_dir, f'{filename}_final_blocks.png')
+        cv2.imwrite(final_output_path, cv2.cvtColor(final_vis_image, cv2.COLOR_RGB2BGR))
+        
+        # Log processing details
+        log_processing_details(filename, rotated_components, rotated_text_lines, rotated_merged_blocks, 
+                             orientation, just_lines, output_dir, log_file)
+        
+        # Print to console as well
+        print(f"\nProcessed {filename}:")
+        print(f"- Found {len(rotated_components)} components")
+        print(f"- Grouped into {len(rotated_text_lines)} text lines")
+        print(f"- Detected {len(rotated_merged_blocks)} text blocks")
+        print(f"- Estimated orientation: {orientation:.1f} degrees")
+        print(f"- Merge mode: {'line-only' if just_lines else 'lines and vertical'}")
+        print(f"\nSaved visualizations:")
+        print(f"- Rotated result: {output_dir}/{filename}_rotated_final_blocks.png")
+        print(f"- Final result rotated back: {output_dir}/{filename}_final_blocks.png")
+        
+        return rotated_components, rotated_text_lines, orientation, rotated_merged_blocks
     
-    return components, text_lines, orientation, merged_blocks
-
+    else:
+        # If orientation is negligible, just process original image
+        text_lines = docstrum.find_text_lines(components, neighbors_info, orientation, spacing_factor=spacing_factor)
+        visualize_text_lines(image, components, text_lines, output_dir, filename)
+        
+        if vertical_distance_threshold == -1:
+            vertical_distance_threshold = calculate_vertical_threshold(text_lines, components)
+            print(f"Automatically calculated vertical threshold: {vertical_distance_threshold:.2f}")
+        
+        initial_blocks = docstrum.find_blocks(components, text_lines)
+        visualize_initial_blocks(image, components, initial_blocks, output_dir, filename)
+        
+        merged_blocks = docstrum.merge_overlapping_blocks(
+            components, initial_blocks,
+            horizontal_distance_threshold=horizontal_distance_threshold,
+            vertical_distance_threshold=vertical_distance_threshold,
+            just_lines=just_lines,
+            block_overlap_threshold=block_overlap_threshold
+        )
+        
+        # Create final visualization
+        vis_image = cv2.cvtColor(image.copy(), cv2.COLOR_GRAY2RGB)
+        colors = generate_distinct_colors(len(merged_blocks))
+        
+        for block_idx, block in enumerate(merged_blocks):
+            block_components = [comp_idx for line in block for comp_idx in line]
+            if not block_components:
+                continue
+            
+            min_x = min(components[idx].bbox[0] for idx in block_components)
+            min_y = min(components[idx].bbox[1] for idx in block_components)
+            max_x = max(components[idx].bbox[0] + components[idx].bbox[2] for idx in block_components)
+            max_y = max(components[idx].bbox[1] + components[idx].bbox[3] for idx in block_components)
+            
+            color = colors[block_idx % len(colors)].tolist()
+            padding = 3
+            cv2.rectangle(vis_image, 
+                        (min_x - padding, min_y - padding), 
+                        (max_x + padding, max_y + padding), 
+                        color, 2)
+        
+        # Save the final visualization directly with OpenCV to maintain resolution
+        final_output_path = os.path.join(output_dir, f'{filename}_final_blocks.png')
+        cv2.imwrite(final_output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
+        
+        # Log processing details
+        log_processing_details(filename, components, text_lines, merged_blocks, 
+                             orientation, just_lines, output_dir, log_file)
+        
+        # Print to console as well
+        print(f"\nProcessed {filename}:")
+        print(f"- Found {len(components)} components")
+        print(f"- Grouped into {len(text_lines)} text lines")
+        print(f"- Detected {len(merged_blocks)} text blocks")
+        print(f"- Estimated orientation: {orientation:.1f} degrees (not rotated)")
+        print(f"- Merge mode: {'line-only' if just_lines else 'lines and vertical'}")
+        print(f"\nSaved visualizations:")
+        print(f"- Final result: {output_dir}/{filename}_final_blocks.png")
+        
+        return components, text_lines, orientation, merged_blocks
 
 
 def main():
