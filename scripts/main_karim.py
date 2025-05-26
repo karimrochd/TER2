@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.17.1
 #   kernelspec:
-#     display_name: TER2
+#     display_name: .venv
 #     language: python
 #     name: python3
 # ---
@@ -35,13 +35,13 @@ class Component:
 
 
 # %%
-def kfill(binary_image, k=5, max_iterations=10):
+def kfill(img_binary, k=5, max_iterations=10):
     """
     Implement the kFill filter for noise reduction in binary document images.
     This is the Will filter mentioned in the paper.
     
     Args:
-        binary_image (numpy.ndarray): Binary image (1 for foreground, 0 for background).
+        img_binary (numpy.ndarray): Binary image (1 for foreground, 0 for background).
         k (int): Window size parameter (must be odd).
         max_iterations (int): Maximum number of iterations to perform.
         
@@ -53,7 +53,7 @@ def kfill(binary_image, k=5, max_iterations=10):
         k = k + 1
     
     # Create a copy of the image
-    filtered_image = binary_image.copy()
+    img_filtered = img_binary.copy()
     
     iteration = 0
     changes_made = True
@@ -65,66 +65,62 @@ def kfill(binary_image, k=5, max_iterations=10):
         
         # Perform ON-fill and OFF-fill sub-iterations
         for fill_value in [1, 0]:  # 1 for ON-fill, 0 for OFF-fill
-            height, width = filtered_image.shape
+            h, w = img_filtered.shape
             
             # Create a copy to store changes for this sub-iteration
-            temp_image = filtered_image.copy()
+            img_temp = img_filtered.copy()
             
             # Process each pixel
-            for y in range(k//2, height - k//2):
-                for x in range(k//2, width - k//2):
+            for y in range(k//2, h-k//2):
+                for x in range(k//2, w-k//2):
                     # Extract window
-                    window = filtered_image[y - k//2 : y + k//2 + 1, x - k//2 : x + k//2 + 1]
+                    window = img_filtered[y-k//2 :y+k//2+1, x-k//2:x+k//2+1]
                     
                     # Define core and neighborhood
                     core = window[1:-1, 1:-1]
                     
                     # Only proceed if all core values are opposite of fill_value
-                    if fill_value == 1 and np.any(core == 1):
-                        continue
-                    if fill_value == 0 and np.any(core == 0):
+                    if np.any(core == fill_value):
                         continue
                     
                     # Extract neighborhood (perimeter of window)
-                    neighborhood = np.concatenate([
-                        window[0, :],                # Top row
-                        window[-1, :],               # Bottom row
-                        window[1:-1, 0],             # Left column (without corners)
-                        window[1:-1, -1]             # Right column (without corners)
+                    nbhd = np.concatenate([
+                        window[0, :-1],             # Top row
+                        window[:-1, -1],            # Right column
+                        window[-1, :0:-1],          # Bottom row
+                        window[:0:-1, 0],           # Left column
                     ])
                     
-                    # Calculate n (number of ON or OFF pixels in neighborhood)
+                    # Compute n (number of fill_value pixels in neighborhood)
                     if fill_value == 1:
-                        n = np.sum(neighborhood == 1)  # Count ON pixels
-                    else:
-                        n = np.sum(neighborhood == 0)  # Count OFF pixels
+                        n = np.sum(nbhd == fill_value)
                     
-                    # Calculate c (number of connected groups in neighborhood)
-                    # We need to analyze the neighborhood as a circular list
-                    expanded_neighborhood = np.concatenate([neighborhood, neighborhood[0:1]])
-                    c = 0
-                    for i in range(len(neighborhood)):
-                        if expanded_neighborhood[i] != expanded_neighborhood[i+1]:
-                            c += 1
-                    c = c // 2  # Each transition is counted twice (ON->OFF and OFF->ON)
+                    # Only proceed if c is 1
+                    # (c is the number of non-looping connected chains
+                    # of pixels with fill_value in the cornerless neighborhood,
+                    # plus number of isolated corner pixels with fill_value;
+                    # equivalently, number of non-looping connected chains of
+                    # pixels with fill_value in the neighborhood, where
+                    # connectedness is defined by 8-connectivity)
+                    tra = nbhd - np.roll(nbhd, 1) # transition from pixel i-1 to pixel i
+                    c = np.sum(tra==1) - np.sum((tra[::k-1]==2*fill_value-1) &
+                                                (tra[1::k-1]==-2*fill_value+1))
+                    if c != 1:
+                        continue
                     
-                    # Calculate r (number of corner pixels that are ON or OFF)
-                    corners = [window[0, 0], window[0, -1], window[-1, 0], window[-1, -1]]
-                    if fill_value == 1:
-                        r = sum(1 for corner in corners if corner == 1)
-                    else:
-                        r = sum(1 for corner in corners if corner == 0)
+                    # Compute r (number of corner pixels that are fill_value)
+                    r = np.sum(nbhd[::k-1] == fill_value)
                     
-                    # Apply kFill condition: (c = 1) AND [(n > 3k - 4) OR (n = 3k - 4) AND r = 2]
-                    if (c == 1) and ((n > 3*k - 4) or ((n == 3*k - 4) and (r == 2))):
+                    # Apply kFill condition (note that c==1 is already ensured)
+                    if n > 3*k-4 or (n == 3*k-4 and r == 2):
                         # Fill the core
-                        temp_image[y - k//2 + 1 : y + k//2, x - k//2 + 1 : x + k//2] = fill_value
+                        img_temp[y-k//2+1:y+k//2, x-k//2+1:x+k//2] = fill_value
                         changes_made = True
             
-            # Update filtered_image with the results of this sub-iteration
-            filtered_image = temp_image.copy()
+            # Update img_filtered with the results of this sub-iteration
+            img_filtered = img_temp.copy()
     
-    return filtered_image
+    return img_filtered
 
 def generate_distinct_colors(n_colors: int) -> np.ndarray:
     """
@@ -153,7 +149,7 @@ def generate_distinct_colors(n_colors: int) -> np.ndarray:
     
     # Adjust colors
     for i in range(len(base)):
-        # Calculate perceived brightness (using common weights)
+        # Compute perceived brightness (using common weights)
         brightness = 0.299 * base[i,0] + 0.587 * base[i,1] + 0.114 * base[i,2]
         
         # Adjust too dark colors
@@ -233,7 +229,7 @@ class Docstrum:
         if not components:
             return []
             
-        # Calculate size for each component (square root of bounding box area)
+        # Compute size for each component (square root of bounding box area)
         sizes = [np.sqrt(comp.bbox[2] * comp.bbox[3]) for comp in components]
         
         # Create histogram of sizes
@@ -272,10 +268,10 @@ class Docstrum:
         
         components = []
         for contour in contours:
-            # Calculate bounding box
+            # Compute bounding box
             x, y, w, h = cv2.boundingRect(contour)
             
-            # Calculate centroid
+            # Compute centroid
             M = cv2.moments(contour)
             if M["m00"] != 0:
                 cx = int(M["m10"] / M["m00"])
@@ -283,7 +279,7 @@ class Docstrum:
             else:
                 cx, cy = x + w // 2, y + h // 2
             
-            # Calculate area and contour length
+            # Compute area and contour length
             area = cv2.contourArea(contour)
             contour_length = cv2.arcLength(contour, True)
             
@@ -335,7 +331,7 @@ class Docstrum:
             # Skip the first neighbor (point itself)
             neighbors = []
             for j, (neighbor_idx, dist) in enumerate(zip(component_neighbors[1:], neighbor_distances[1:]), 1):
-                # Calculate angle between components
+                # Compute angle between components
                 dx = points[neighbor_idx][0] - points[i][0]
                 dy = points[neighbor_idx][1] - points[i][1]
                 angle = np.degrees(np.arctan2(dy, dx)) % 180
@@ -540,7 +536,7 @@ class Docstrum:
         if not long_lines:
             long_lines = text_lines
             
-        # Calculate orientation for each line
+        # Compute orientation for each line
         orientations = []
         for line in long_lines:
             if len(line) < 2:
@@ -549,7 +545,7 @@ class Docstrum:
             # Extract centroids
             centroids = [components[idx].centroid for idx in line]
             
-            # Calculate orientation via linear regression
+            # Compute orientation via linear regression
             x = [c[0] for c in centroids]
             y = [c[1] for c in centroids]
             
