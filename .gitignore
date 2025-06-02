@@ -1,6 +1,9 @@
 __pycache__/
-input_data/
-test1.png
-output/
-Images/
-notebooks/
+.DS_Store
+.env
+.venv/
+
+ddl.json
+
+test*
+*.ipynb
