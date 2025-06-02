@@ -14,24 +14,26 @@
 
 # %%
 import argparse
-import cv2
-import numpy as np
-from scipy.spatial import KDTree
-import matplotlib.pyplot as plt
-from typing import List, Tuple, Dict
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
+from typing import List, Tuple, Dict
+
+import cv2
 import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import skimage as ski
+from scipy.spatial import KDTree
+from skimage.filters import threshold_otsu
 
 
 # %%
 @dataclass
 class Component:
     """Class to store connected component information"""
-    bbox: Tuple[int, int, int, int]  # x, y, w, h
-    centroid: Tuple[float, float]
+    bbox: np.ndarray  # x, y, w, h, dtype=np.int32
+    centroid: np.ndarray   # x, y, dtype=np.float64
     area: int
-    contour_length: int
 
 
 # %%
@@ -53,7 +55,7 @@ def kfill(img_binary, k=5, max_iterations=10):
         k = k + 1
     
     # Create a copy of the image
-    img_filtered = img_binary.copy()
+    img_filtered = img_binary.astype(np.int32)
     
     iteration = 0
     changes_made = True
@@ -191,7 +193,8 @@ class Docstrum:
         self.k = k_nearest
         self.angle_threshold = angle_threshold
 
-    def preprocess(self, image: np.ndarray, kfill_threshold = 5, max_iterations = 10) -> np.ndarray:
+    # TODO: Default parameters for kFill??
+    def preprocess(self, img, kfill_threshold=5, max_iterations=0):
         """
         Preprocess the image - noise reduction and binarization as described in the paper.
         
@@ -202,19 +205,18 @@ class Docstrum:
             Binary image
         """
         # Apply Otsu's thresholding
-        _, binary = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        thresh = threshold_otsu(img)
+        img_binary = (img < thresh).astype(np.int32)
         
-        # Invert if needed (assuming text is black)
-        if np.mean(binary) > 127:
-            binary = cv2.bitwise_not(binary)
-            
-        # Convert to binary format (0 and 1)
-        binary = (binary > 0).astype(np.uint8)
+        # Invert if needed we want text = foreground = 1
+        if np.mean(img_binary) > 0.5:
+            img_binary = 1 - img_binary
         
-        # Apply the Will filter (kFill) for noise reduction as mentioned in the paper
-        binary = kfill(binary, k= kfill_threshold, max_iterations= max_iterations)
+        # Apply the kFill filter for salt-pepper noise reduction
+        img_binary = kfill(img_binary,
+                           k=kfill_threshold, max_iterations=max_iterations)
         
-        return binary
+        return img_binary
     
     def size_filtering(self, components: List[Component]) -> List[Component]:
         """
@@ -232,18 +234,22 @@ class Docstrum:
         # Compute size for each component (square root of bounding box area)
         sizes = [np.sqrt(comp.bbox[2] * comp.bbox[3]) for comp in components]
         
+        # TODO: carefully check histogram binning and peak detection
+
         # Create histogram of sizes
         hist, bins = np.histogram(sizes, bins='auto')
         
         # Find the peak for predominant font size
         peak_idx = np.argmax(hist)
-        peak_size = (bins[peak_idx] + bins[peak_idx + 1]) / 2
+        peak_size = (bins[peak_idx] + bins[peak_idx+1]) / 2
         
         # Filter components - keep those within a reasonable range of peak size
-        # Paper suggests keeping components in the predominant size range
-        filtered_components = []
-        min_size = peak_size / 10  # Allow for subscripts/small characters
-        max_size = peak_size * 10  # Allow for larger characters but not titles
+        min_size = 3
+        max_size = 3 * peak_size
+
+        filtered_components = [comp
+                               for comp, size in zip(components, sizes)
+                               if min_size <= size <= max_size]
         
         for i, comp in enumerate(components):
             if min_size <= sizes[i] <= max_size:
@@ -251,7 +257,7 @@ class Docstrum:
         
         return filtered_components
 
-    def find_connected_components(self, binary: np.ndarray) -> List[Component]:
+    def find_connected_components(self, img_binary: np.ndarray) -> List[Component]:
         """
         Find connected components in binary image using contours as described in the paper.
         The paper mentions using "thin line code" (TLC), but we'll use OpenCV contours
@@ -263,35 +269,13 @@ class Docstrum:
         Returns:
             List of Component objects
         """
-        # Find contours
-        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        _, _, stats, centroids = cv2.connectedComponentsWithStats(
+            img_binary.astype(np.uint8), connectivity=8)
         
-        components = []
-        for contour in contours:
-            # Compute bounding box
-            x, y, w, h = cv2.boundingRect(contour)
-            
-            # Compute centroid
-            M = cv2.moments(contour)
-            if M["m00"] != 0:
-                cx = int(M["m10"] / M["m00"])
-                cy = int(M["m01"] / M["m00"])
-            else:
-                cx, cy = x + w // 2, y + h // 2
-            
-            # Compute area and contour length
-            area = cv2.contourArea(contour)
-            contour_length = cv2.arcLength(contour, True)
-            
-            # Create component
-            component = Component(
-                bbox=(x, y, w, h),
-                centroid=(cx, cy),
-                area=area,
-                contour_length=contour_length
-            )
-            
-            components.append(component)
+        comps = [Component(bbox=stat[:4],
+                           centroid=centroid,
+                           area=stat[4].item())
+                 for stat, centroid in zip(stats, centroids)]
         
         # Apply size filtering as described in the paper
         filtered_components = self.size_filtering(components)
@@ -310,36 +294,26 @@ class Docstrum:
         Returns:
             List of lists containing (neighbor_idx, distance, angle) tuples for each component
         """
-        if len(components) < self.k + 1:
+        if len(components) < self.k+1:
             raise ValueError(f"Not enough components ({len(components)}) for k={self.k} nearest neighbors")
             
         # Extract centroids
         points = np.array([c.centroid for c in components])
         
-        # Adjust k if necessary
-        k = min(self.k + 1, len(components))
-        print(f"Finding {k-1} nearest neighbors for each component")
-        
         # Build KD-tree for efficient nearest neighbor search
         tree = KDTree(points)
         
         # Find k nearest neighbors (first one is the point itself)
-        distances, indices = tree.query(points, k=k)
-        
-        neighbors_info = []
-        for i, (component_neighbors, neighbor_distances) in enumerate(zip(indices, distances)):
-            # Skip the first neighbor (point itself)
-            neighbors = []
-            for j, (neighbor_idx, dist) in enumerate(zip(component_neighbors[1:], neighbor_distances[1:]), 1):
-                # Compute angle between components
-                dx = points[neighbor_idx][0] - points[i][0]
-                dy = points[neighbor_idx][1] - points[i][1]
-                angle = np.degrees(np.arctan2(dy, dx)) % 180
-                
-                neighbors.append((neighbor_idx, dist, angle))
-            
-            neighbors_info.append(neighbors)
-            
+        distances, indices = tree.query(points, k=self.k+1) # shapes (n, k+1) and (n, k+1)
+
+        # Compute angles
+        vectors = points[indices[:, 1:]] - points[:, None, :] # shape (n, k, 2)
+        angles = np.arctan2(vects[..., 1], vects[..., 0]) * 180/np.pi # shape (n, k)
+
+        neighbors_info = np.stack([indices[:, 1:],
+                                   distances[:, 1:],
+                                   angles], axis=-1)  # shape (n, k, 3)
+
         return neighbors_info
 
 
