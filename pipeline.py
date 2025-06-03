@@ -462,7 +462,7 @@ def compute_line_distances(PQ1: np.ndarray,
     n1 = delta1 / np.linalg.norm(delta1, axis=-1, keepdims=True) # [cos, sin], shape (..., 2)
     Mrot = np.stack([n1, n1[..., ::-1]*[-1, 1]], axis=-2) # [[cos, sin], [-sin, cos]], shape (..., 2, 2)
     # Rotate points
-    PPQQ = Mrot @ PQPQ
+    PQPQ = Mrot @ PQPQ
 
     # cos(theta2-theta1)
     delta2 = PQPQ[..., 3] - PQPQ[..., 2] # Q2-P2 after rotation, shape (..., 2)
@@ -470,21 +470,24 @@ def compute_line_distances(PQ1: np.ndarray,
 
     # Order A, B, C, D
     order = np.argsort(PQPQ[..., 0, :], axis=-1) # shape (..., 4)
+    # x-coordinates of B and C
+    inds = tuple(np.indices(PQPQ.shape[:-2]))
+    xB = PQPQ[inds + (0, order[..., 1])] # shape (...)
+    xC = PQPQ[inds + (0, order[..., 2])] # shape (...)
 
     # Parallel distance
-    inds = np.indices(PQPQ.shape[:-2])
-    da = (PQPQ[*inds, 0, order[*inds, 2]] - PPQQ[*inds, 0, order[*inds, 1]]) / np.abs(cos_t12) # (xC-xB)/cos(theta2-theta1), shape (...)
+    da = (xC-xB)/np.abs(cos_t12) # shape (...)
     # Overlap condition
     xLR = np.sort(PQPQ[..., 0, [0, 1]], axis=-1) # (xP1, xQ1) in order, shape (..., 2)
-    cond1 = xLR[..., 1] == PQPQ[*inds, 0, order[*inds, 1]] # xR1 == xB
-    cond2 = xLR[..., 0] == PQPQ[*inds, 0, order[*inds, 2]] # xL1 == xC
+    cond1 = xLR[..., 1] == xB # xR1 == xB
+    cond2 = xLR[..., 0] == xC # xL1 == xC
     da *= np.where(cond1 | cond2, -1, 1)
 
     # Perpendicular distance
-    xM = (PQPQ[*inds, 0, order[*inds, 1]] + PQPQ[*inds, 0, order[*inds, 2]]) / 2 # (xB+xC)/2, shape (...)
+    xM = (xB+xC)/2 # shape (...)
     alpha = (xM - PQPQ[..., 0, 2]) / (PQPQ[..., 0, 3] - PQPQ[..., 0, 2]) # (xM-xP2)/(xQ2-xP2), shape (...)
     # alpha = 1-alpha
-    de = (1-alpha)*PQPQ[..., 1, 2] + alpha*PQPQ[..., 1, 3] - PPQQ[..., 1, 0] # (1-alpha)*yP2 + alpha*yQ2 - yP1, shape (...)
+    de = (1-alpha)*PQPQ[..., 1, 2] + alpha*PQPQ[..., 1, 3] - PQPQ[..., 1, 0] # (1-alpha)*yP2 + alpha*yQ2 - yP1, shape (...)
     de = np.abs(de)
     
     # Angular difference
