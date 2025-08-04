@@ -89,7 +89,7 @@ class Docstrum:
         
         Args:
             image: Input grayscale image
-            small_component_threshold: Minimum size threshold for components
+            small_component_threshold: Minimum size threshold for components. Components smaller than peak component area * small_component_thresholdwill be removed
             binarization_threshold: Threshold for binarization (-1 for Otsu)
             kfill_threshold: Window size for kFill filter
             filter_type: Filtering type (0: kFill, 1: size, 2: both)
@@ -121,7 +121,7 @@ class Docstrum:
         
         Args:
             binary: Binary image (text as 1, background as 0)
-            big_component_threshold: Maximum size threshold (-1 to disable)
+            big_component_threshold: Maximum size threshold (-1 to disable). Components larger than peak component area * big_component_threshold will be removed.
             
         Returns:
             List of Component objects with bbox in (x1, y1, x2, y2) format

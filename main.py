@@ -16,9 +16,15 @@ from typing import List, Tuple, Optional
 from segmentation import Docstrum, Component, calculate_vertical_threshold
 from preprocess import rotate_image
 from visualize import (
-    visualize_preprocessing, visualize_components, visualize_neighbors,
-    visualize_orientation_histogram, visualize_docstrum, visualize_text_lines,
-    visualize_initial_blocks, visualize_final_blocks, generate_distinct_colors
+    visualize_preprocessing, 
+    visualize_components, 
+    visualize_neighbors,
+    visualize_orientation_histogram, 
+    visualize_docstrum, 
+    visualize_text_lines,
+    visualize_initial_blocks, 
+    visualize_final_blocks, 
+    generate_distinct_colors
 )
 
 

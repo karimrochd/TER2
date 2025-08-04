@@ -1479,3 +1479,41 @@ Error processing test1: name 'v' is not defined
     - Saved visualization to output_r
     ----------------------------------------
     
+Processed Test1:
+- Found 427 components
+- Grouped into 201 text lines
+- Detected 4 text blocks
+- Estimated orientation: 167.5 degrees
+- Merge mode: lines and vertical
+- Saved visualization to output
+----------------------------------------
+Error processing image: Not enough components (1) for k=5 nearest neighbors
+Error processing image: Not enough components (1) for k=5 nearest neighbors
+
+Processed Test1:
+- Found 1285 components
+- Grouped into 370 text lines
+- Detected 5 text blocks
+- Estimated orientation: 0.0 degrees
+- Merge mode: lines and vertical
+- Saved visualization to output
+----------------------------------------
+
+Processed Test2:
+- Found 647 components
+- Grouped into 594 text lines
+- Detected 1 text blocks
+- Estimated orientation: 126.5 degrees
+- Merge mode: lines and vertical
+- Saved visualization to output
+----------------------------------------
+Error processing rotated_output: Not enough components (1) for k=5 nearest neighbors
+
+Processed rotated_output:
+- Found 1463 components
+- Grouped into 891 text lines
+- Detected 4 text blocks
+- Estimated orientation: 136.5 degrees
+- Merge mode: lines and vertical
+- Saved visualization to output
+----------------------------------------
